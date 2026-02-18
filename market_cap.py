@@ -50,11 +50,10 @@ class MarketCapProvider:
         page = 1
 
         # Top 3000 coins covers virtually ALL Binance futures pairs
-        # including small-caps with $10-50M market cap
         # 12 pages × 250 = 3000 coins
-        # With 7s delay = ~84 seconds total — safe for free tier
+        # With 12s delay = ~132 seconds total — very safe for free tier
         max_pages = 12
-        page_delay = 7.0
+        page_delay = 12.0
         errors = 0
         max_errors = 3
         consecutive_429 = 0
@@ -84,7 +83,6 @@ class MarketCapProvider:
                         )
                         break
                     wait = int(resp.headers.get("Retry-After", 90))
-                    # add extra buffer per consecutive 429
                     wait = wait + (consecutive_429 * 30)
                     logger.warning(
                         "CoinGecko 429 on page %d — waiting %ds (attempt %d/3)",
@@ -107,7 +105,6 @@ class MarketCapProvider:
                     logger.debug("CoinGecko: page %d empty — done.", page)
                     break
 
-                # reset 429 counter on success
                 consecutive_429 = 0
 
                 for coin in rows:
