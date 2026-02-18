@@ -8,9 +8,9 @@ Responsibilities
    a) Volume spike  (recent avg vs baseline avg)
    b) Breakout      (close > highest high of N prior candles)   [optional]
    c) OI surge      (current OI vs avg of N prior periods)       [optional]
-3. Enforce a configurable cooldown per symbol (default 12 h) so the same
-   coin is not alerted repeatedly.
-4. Dispatch matching alerts to Telegram.
+3. Enforce a configurable cooldown per symbol (default 12 h).
+4. Record passing signals in the tracker for performance monitoring.
+5. Dispatch matching alerts to Telegram.
 """
 
 from __future__ import annotations
@@ -18,11 +18,12 @@ from __future__ import annotations
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from binance_client import BinanceClient
 from market_cap import MarketCapProvider
 from notifier import TelegramNotifier
+from tracker import SignalTracker
 
 logger = logging.getLogger(__name__)
 
@@ -30,17 +31,9 @@ logger = logging.getLogger(__name__)
 # ── cooldown tracker ─────────────────────────────────────────────────
 
 class _CooldownTracker:
-    """
-    Enforce a time-based cooldown per symbol.
-
-    After an alert fires for a symbol, that symbol is blocked for
-    *cooldown_seconds*.  This prevents spam when a coin stays in
-    a high-volume regime across many consecutive candles.
-    """
-
     def __init__(self, cooldown_seconds: float) -> None:
         self._cooldown = cooldown_seconds
-        self._last_alert: Dict[str, float] = {}      # symbol → epoch
+        self._last_alert: Dict[str, float] = {}
 
     def is_on_cooldown(self, symbol: str) -> bool:
         last = self._last_alert.get(symbol)
@@ -48,35 +41,16 @@ class _CooldownTracker:
             return False
         remaining = self._cooldown - (time.time() - last)
         if remaining > 0:
-            logger.debug(
-                "%s  on cooldown — %.1f min remaining",
-                symbol, remaining / 60,
-            )
+            logger.debug("%s  on cooldown — %.1f min remaining", symbol, remaining / 60)
             return True
         return False
 
     def record(self, symbol: str) -> None:
         self._last_alert[symbol] = time.time()
 
-    def remaining_str(self, symbol: str) -> str:
-        """Human-readable time until cooldown expires."""
-        last = self._last_alert.get(symbol)
-        if last is None:
-            return "0s"
-        rem = self._cooldown - (time.time() - last)
-        if rem <= 0:
-            return "0s"
-        hours = int(rem // 3600)
-        mins = int((rem % 3600) // 60)
-        return f"{hours}h {mins}m"
-
     def prune(self) -> None:
-        """Drop expired entries to keep memory bounded."""
         now = time.time()
-        expired = [
-            s for s, t in self._last_alert.items()
-            if now - t > self._cooldown
-        ]
+        expired = [s for s, t in self._last_alert.items() if now - t > self._cooldown]
         for s in expired:
             del self._last_alert[s]
 
@@ -90,7 +64,12 @@ class _CooldownTracker:
 
 class Scanner:
 
-    def __init__(self, config: dict) -> None:
+    def __init__(
+        self,
+        config: dict,
+        binance: BinanceClient,
+        tracker: Optional[SignalTracker] = None,
+    ) -> None:
         sc = config["scanner"]
 
         # tunables
@@ -108,20 +87,17 @@ class Scanner:
         self.excluded:        set   = set(sc.get("excluded_symbols", []))
         self.cooldown_hours:  float = sc.get("cooldown_hours", 12)
 
-        # how many closed candles we need per symbol
         vol_need = self.vol_recent + self.vol_baseline
         brk_need = (self.brk_lookback + 1) if self.brk_on else 0
         self._candles_needed = max(vol_need, brk_need)
 
+        # shared binance client
+        self._binance = binance
+
         # components
         rl = config.get("rate_limit", {})
-        self._binance = BinanceClient(
-            api_key=config["binance"].get("api_key", ""),
-            api_secret=config["binance"].get("api_secret", ""),
-            delay_ms=rl.get("binance_delay_ms", 100),
-        )
         self._mcap = MarketCapProvider(
-            cache_minutes=rl.get("market_cap_cache_minutes", 60),
+            cache_minutes=rl.get("market_cap_cache_minutes", 120),
             include_unknown=sc.get("include_unknown_market_cap", True),
         )
         self._tg = TelegramNotifier(
@@ -131,6 +107,7 @@ class Scanner:
         self._cooldown = _CooldownTracker(
             cooldown_seconds=self.cooldown_hours * 3600,
         )
+        self._tracker = tracker
         self._mark_prices: Dict[str, float] = {}
         self._running = False
 
@@ -162,7 +139,6 @@ class Scanner:
             self._sleep(max(0.0, self.interval - elapsed))
 
     def _sleep(self, seconds: float) -> None:
-        """Interruptible sleep."""
         end = time.time() + seconds
         while self._running and time.time() < end:
             time.sleep(min(1.0, end - time.time()))
@@ -170,17 +146,14 @@ class Scanner:
     # ── one full scan cycle ──────────────────────────────────────────
 
     def _cycle(self) -> None:
-        # 1 — symbols
         all_syms = self._binance.get_usdt_perpetual_symbols()
 
-        # 2 — mark prices (one call)
         try:
             self._mark_prices = self._binance.get_mark_prices()
         except Exception as exc:
             logger.warning("Mark-price fetch failed: %s", exc)
             self._mark_prices = {}
 
-        # 3 — market-cap + exclusion filter
         targets = [
             s for s in all_syms
             if s["symbol"] not in self.excluded
@@ -193,7 +166,6 @@ class Scanner:
             self._cooldown.active_count,
         )
 
-        # 4 — analyse each target
         alerts = 0
         for idx, sym in enumerate(targets, 1):
             if not self._running:
@@ -209,7 +181,6 @@ class Scanner:
             if idx % 50 == 0:
                 logger.debug("Progress %d / %d", idx, len(targets))
 
-        # 5 — prune expired cooldowns to free memory
         self._cooldown.prune()
 
         if alerts:
@@ -221,7 +192,6 @@ class Scanner:
         symbol = sym["symbol"]
         base   = sym["base_asset"]
 
-        # ── cooldown check (skip early to save API calls) ────────────
         if self._cooldown.is_on_cooldown(symbol):
             return None
 
@@ -284,7 +254,7 @@ class Scanner:
                 return None
             logger.info("%s  OI +%.2f%%", symbol, oi_pct)
 
-        # ── all conditions passed — record cooldown ──────────────────
+        # ── all conditions passed ────────────────────────────────────
         self._cooldown.record(symbol)
 
         price = self._mark_prices.get(symbol)
@@ -301,11 +271,16 @@ class Scanner:
             "breakout_confirmed": brk_ok,
             "oi_enabled":         self.oi_on,
             "oi_pct":             oi_pct,
-            "price":              f"{price:.6f}" if price else "N/A",
+            "price":              f"{price:.8f}" if price else "N/A",
             "candle_time":        candle_dt.strftime("%Y-%m-%d %H:%M UTC"),
             "alert_time":         now_dt.strftime("%Y-%m-%d %H:%M:%S UTC"),
             "cooldown_hours":     self.cooldown_hours,
         }
+
+        # record in tracker for performance monitoring
+        if self._tracker:
+            self._tracker.record_signal(alert)
+
         logger.info(
             "🚨  ALERT  %s  vol=%.2fx  brk=%s  oi=%s  (cooldown %.0fh starts now)",
             symbol, ratio, brk_ok, oi_pct, self.cooldown_hours,
@@ -330,7 +305,6 @@ class Scanner:
     # ── utilities ────────────────────────────────────────────────────
 
     def _candle_ms(self) -> int:
-        """Approximate candle duration in milliseconds."""
         multipliers = {
             "m": 60_000, "h": 3_600_000,
             "d": 86_400_000, "w": 604_800_000,
@@ -343,7 +317,7 @@ class Scanner:
 
     def _send_startup(self) -> None:
         lines = [
-            f"⚙️ <b>Configuration</b>",
+            "⚙️ <b>Configuration</b>",
             f"• Timeframe: {self.timeframe}",
             f"• Market-cap filter: ≤ ${self.mcap_max / 1e6:.0f}M",
             f"• Volume: last {self.vol_recent} vs prev {self.vol_baseline} (≥{self.vol_mult}x)",
@@ -359,5 +333,6 @@ class Scanner:
         else:
             lines.append("• OI filter: <b>OFF</b>")
         lines.append(f"• Cooldown: <b>{self.cooldown_hours}h</b> per symbol")
+        lines.append(f"• Tracker: <b>{'ON' if self._tracker else 'OFF'}</b>")
         lines.append(f"• Scan interval: {self.interval}s")
         self._tg.send_startup("\n".join(lines))

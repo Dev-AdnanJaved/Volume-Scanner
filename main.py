@@ -1,18 +1,24 @@
 """
 Binance USDT-M Futures Volume Scanner — Entry Point.
 
-Scans perpetual futures for volume anomalies, optional breakout
-confirmation, optional open-interest surge, and alerts via Telegram.
+Starts three concurrent components:
+  1. Scanner          — main loop, scans all pairs every cycle
+  2. Signal Tracker   — background price updater for performance monitoring
+  3. Command Listener — Telegram bot command handler (/report, /summary, etc.)
 """
 
 import json
 import logging
 import signal
 import sys
+import threading
 import time
 from pathlib import Path
 
+from binance_client import BinanceClient
 from scanner import Scanner
+from tracker import SignalTracker
+from bot_commands import TelegramCommandListener
 
 
 # ── helpers ──────────────────────────────────────────────────────────
@@ -42,7 +48,6 @@ def setup_logging(config: dict) -> None:
 
 
 def validate_config(cfg: dict) -> None:
-    """Fail fast if critical keys are missing."""
     required_keys = [
         ("telegram", "bot_token"),
         ("telegram", "chat_id"),
@@ -68,13 +73,60 @@ def main() -> None:
     logger.info("  Binance Futures Volume Scanner  —  starting")
     logger.info("=" * 60)
 
-    scanner = Scanner(config)
+    # shared Binance client
+    rl = config.get("rate_limit", {})
+    binance = BinanceClient(
+        api_key=config["binance"].get("api_key", ""),
+        api_secret=config["binance"].get("api_secret", ""),
+        delay_ms=rl.get("binance_delay_ms", 100),
+    )
 
-    # graceful shutdown on Ctrl-C / SIGTERM
+    # signal tracker (optional)
+    tracker_cfg = config.get("tracker", {})
+    tracker: SignalTracker | None = None
+    tracker_thread: threading.Thread | None = None
+    cmd_listener: TelegramCommandListener | None = None
+    cmd_thread: threading.Thread | None = None
+
+    if tracker_cfg.get("enabled", False):
+        tracker = SignalTracker(config, binance)
+
+        # background price updater thread
+        tracker_thread = threading.Thread(
+            target=tracker.run,
+            name="tracker",
+            daemon=True,
+        )
+        tracker_thread.start()
+
+        # telegram command listener thread
+        cmd_listener = TelegramCommandListener(
+            bot_token=config["telegram"]["bot_token"],
+            chat_id=config["telegram"]["chat_id"],
+            tracker=tracker,
+            binance=binance,
+        )
+        cmd_thread = threading.Thread(
+            target=cmd_listener.run,
+            name="commands",
+            daemon=True,
+        )
+        cmd_thread.start()
+        logger.info("Tracker + command listener started")
+    else:
+        logger.info("Tracker disabled — no performance tracking or commands")
+
+    # scanner (runs on main thread)
+    scanner = Scanner(config, binance, tracker)
+
+    # graceful shutdown
     def _shutdown(sig, _frame):
         logger.info("Received signal %s — shutting down …", sig)
         scanner.stop()
-        sys.exit(0) 
+        if tracker:
+            tracker.stop()
+        if cmd_listener:
+            cmd_listener.stop()
 
     signal.signal(signal.SIGINT, _shutdown)
     signal.signal(signal.SIGTERM, _shutdown)
@@ -84,6 +136,8 @@ def main() -> None:
     except Exception:
         logger.critical("Fatal error", exc_info=True)
         sys.exit(1)
+
+    logger.info("Shutdown complete.")
 
 
 if __name__ == "__main__":
