@@ -53,7 +53,7 @@ class MarketCapProvider:
         # 12 pages × 250 = 3000 coins
         # With 12s delay = ~132 seconds total — very safe for free tier
         max_pages = 12
-        page_delay = 12.0
+        page_delay = 20.0
         errors = 0
         max_errors = 3
         consecutive_429 = 0
