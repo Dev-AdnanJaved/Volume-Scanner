@@ -203,13 +203,13 @@ class TelegramCommandListener:
         logger.info("Command received: %s %s", cmd, args)
 
         handlers = {
-            "/report":  lambda: self._cmd_report(chat_id, args),
-            "/summary": lambda: self._cmd_summary(chat_id),
-            "/active":  lambda: self._cmd_active(chat_id),
-            "/help":    lambda: self._cmd_help(chat_id),
-            "/start":   lambda: self._cmd_help(chat_id),
+            "/report":   lambda: self._cmd_report(chat_id, args),
+            "/analysis": lambda: self._cmd_analysis(chat_id, args),    # ← ADD
+            "/summary":  lambda: self._cmd_summary(chat_id),
+            "/active":   lambda: self._cmd_active(chat_id),
+            "/help":     lambda: self._cmd_help(chat_id),
+            "/start":    lambda: self._cmd_help(chat_id),
         }
-
         handler = handlers.get(cmd)
         if handler:
             handler()
@@ -568,13 +568,315 @@ class TelegramCommandListener:
     def _cmd_help(self, chat_id: str) -> None:
         text = (
             "🤖 <b>COMMANDS</b>\n\n"
-            "/report — All signals + performance\n"
-            "/report ARC — Detailed + diagnosis\n"
+            "/report — Quick performance overview\n"
+            "/report ARC — Single coin detailed + diagnosis\n"
+            "/analysis — Full backtesting report (all signals)\n"
+            "/analysis ARC — Full report for one coin\n"
             "/summary — Stats + win rates\n"
             "/active — Quick signal list\n"
             "/help — This message\n\n"
             f"📡 Tracking window: {self._tracker.max_age_hours}h\n"
-            "🏔 Prices update every 5 min\n"
-            "🔍 /report SYMBOL for diagnosis"
+            "🏔 Prices update every 5 min"
         )
         self._send(chat_id, text)
+        
+        
+        
+        #---------------------------------------------------------------------------------
+        
+        #ANALYSIS
+            # ── /analysis (full backtesting report) ──────────────────────────
+
+    def _cmd_analysis(self, chat_id: str, args: list) -> None:
+        try:
+            prices = self._binance.get_mark_prices()
+            self._tracker.apply_prices(prices)
+        except Exception:
+            prices = {}
+
+        signals = self._tracker.get_active_signals()
+        if not signals:
+            self._send(chat_id, "🔬 No active signals.")
+            return
+
+        # optional filter by symbol
+        if args:
+            sym = args[0].upper()
+            if not sym.endswith("USDT"):
+                sym += "USDT"
+            signals = [s for s in signals if s["symbol"] == sym]
+            if not signals:
+                self._send(chat_id, f"🔬 No active signals for <b>{sym}</b>")
+                return
+
+        signals.sort(key=lambda s: s["alert_time_ts"], reverse=True)
+
+        for sig in signals:
+            self._send_analysis_card(chat_id, sig, prices)
+            time.sleep(0.5)
+
+        # final summary
+        if len(signals) > 1:
+            self._send_analysis_summary(chat_id, signals, prices)
+
+    def _send_analysis_card(self, chat_id: str, sig: dict, prices: dict) -> None:
+        sym = sig["symbol"]
+        entry = sig.get("entry_price", 0)
+        highest = sig.get("highest_price", entry)
+        current = prices.get(sym, sig.get("current_price", 0))
+        if current > highest:
+            highest = current
+
+        cur_pct = self._calc_pct(entry, current) if entry > 0 else 0
+        high_pct = self._calc_pct(entry, highest) if entry > 0 else 0
+        age = self._fmt_age(sig["alert_time_ts"])
+        result = self._result_emoji(cur_pct)
+
+        lines = [
+            f"{result} <b>{sym}</b>  —  {age}",
+            "",
+        ]
+
+        # ── PRICE SECTION ────────────────────────────────────────────
+        lines.append(f"Entry:   {self._fmt_price(entry)}")
+        lines.append(f"Now:     {self._fmt_price(current)}  {self._fmt_pct(cur_pct)}")
+        lines.append(f"Peak:    {self._fmt_price(highest)}  {self._fmt_pct(high_pct)}")
+
+        # ── WHY BOT SENT THIS SIGNAL ─────────────────────────────────
+        lines.append("")
+        lines.append("── <b>WHY SIGNAL TRIGGERED</b> ──")
+
+        # volume reason
+        vol_ratio = sig.get("vol_ratio", 0)
+        recent_fmt = sig.get("recent_vol_fmt", "")
+        baseline_fmt = sig.get("baseline_vol_fmt", "")
+        if recent_fmt and recent_fmt != "N/A":
+            lines.append(
+                f"📊 Volume {vol_ratio:.1f}x spike"
+                f" ({recent_fmt} vs {baseline_fmt} normal)"
+            )
+        else:
+            lines.append(f"📊 Volume {vol_ratio:.1f}x spike")
+
+        # candle quality reason
+        candle_color = sig.get("candle_color", "")
+        body = sig.get("body_pct", 0)
+        wick = sig.get("upper_wick_pct", 0)
+        lwick = sig.get("lower_wick_pct", 0)
+        if candle_color and body > 0:
+            lines.append(
+                f"🕯 {self._color_emoji(candle_color)} {candle_color} candle"
+                f"  body:{body:.0f}%  wick:{wick:.0f}%  lwick:{lwick:.0f}%"
+            )
+
+        # breakout reason
+        brk_margin = sig.get("breakout_margin_pct")
+        brk_level = sig.get("breakout_level")
+        if sig.get("breakout_confirmed") and brk_level:
+            lines.append(
+                f"🔺 Broke {self._fmt_price(brk_level)}"
+                f" by +{brk_margin:.2f}%"
+            )
+
+        # OI reason
+        oi = sig.get("oi_pct")
+        if oi is not None:
+            lines.append(f"📈 OI increased +{oi:.2f}%")
+
+        # trend at time of signal
+        pattern = sig.get("trend_pattern", "")
+        trend_g = sig.get("trend_green", 0)
+        trend_t = sig.get("trend_total", 0)
+        if pattern:
+            lines.append(
+                f"📊 Trend: {trend_g}/{trend_t} green"
+                f"  {self._pattern_emoji(pattern)}"
+            )
+
+        # market cap
+        mcap = sig.get("mcap", "Unknown")
+        lines.append(f"💰 MCap: {mcap}")
+
+        # ── WHAT HAPPENED AFTER ──────────────────────────────────────
+        lines.append("")
+        lines.append("── <b>WHAT HAPPENED</b> ──")
+
+        if entry > 0 and current > 0:
+            if high_pct > 5 and cur_pct > 3:
+                lines.append("🚀 Went up and holding — strong momentum")
+            elif high_pct > 5 and cur_pct < 0:
+                lines.append(
+                    f"⚠️ Peaked at {high_pct:+.1f}% then reversed to {cur_pct:+.1f}%"
+                )
+                lines.append("   → Likely hit resistance / distribution")
+            elif high_pct > 2 and cur_pct >= 0:
+                lines.append("✅ Moderate move, still holding gains")
+            elif high_pct < 1 and cur_pct < -3:
+                lines.append("❌ Never moved up — signal failed")
+                lines.append("   → May have been too late / weak setup")
+            elif high_pct < 1 and cur_pct >= -3:
+                lines.append("⏳ Flat — no significant move yet")
+            elif cur_pct < -5:
+                lines.append(f"🔴 Down {cur_pct:.1f}% — strong reversal against signal")
+            else:
+                lines.append(f"📊 Currently {cur_pct:+.1f}%, peaked at {high_pct:+.1f}%")
+
+        # BTC context
+        btc_at = sig.get("btc_price")
+        btc_now = prices.get("BTCUSDT")
+        if btc_at and btc_now:
+            btc_chg = self._calc_pct(btc_at, btc_now)
+            coin_vs_btc = cur_pct - btc_chg
+            lines.append(
+                f"₿ BTC {btc_chg:+.2f}% since signal"
+                f"  →  coin vs BTC: {coin_vs_btc:+.2f}%"
+            )
+
+        # ── QUALITY FLAGS ────────────────────────────────────────────
+        flags = self._quality_flags(sig, cur_pct, high_pct)
+        if flags:
+            lines.append("")
+            lines.append("── <b>QUALITY FLAGS</b> ──")
+            for f in flags:
+                lines.append(f)
+
+        lines.append("")
+        lines.append(f"🕐 {sig.get('alert_time', 'N/A')}")
+        lines.append("━" * 26)
+
+        self._send(chat_id, "\n".join(lines))
+
+    @staticmethod
+    def _quality_flags(sig: dict, cur_pct: float, high_pct: float) -> list[str]:
+        flags: list[str] = []
+
+        wick = sig.get("upper_wick_pct", 0)
+        body = sig.get("body_pct", 0)
+        brk_margin = sig.get("breakout_margin_pct")
+        trend_g = sig.get("trend_green", 0)
+        trend_t = sig.get("trend_total", 5)
+        vol_ratio = sig.get("vol_ratio", 0)
+        candle_color = sig.get("candle_color", "")
+
+        # positive flags
+        if body >= 60:
+            flags.append(f"✅ Strong body ({body:.0f}%)")
+        if brk_margin is not None and brk_margin > 2:
+            flags.append(f"✅ Clean breakout (+{brk_margin:.1f}%)")
+        if trend_t > 0 and trend_g / trend_t >= 0.8:
+            flags.append(f"✅ Strong trend ({trend_g}/{trend_t})")
+        if vol_ratio >= 8:
+            flags.append(f"✅ High volume ({vol_ratio:.0f}x)")
+        oi = sig.get("oi_pct")
+        if oi is not None and oi > 15:
+            flags.append(f"✅ Strong OI (+{oi:.0f}%)")
+
+        # warning flags
+        if candle_color == "RED":
+            flags.append("⚠️ RED candle")
+        if 0 < body < 35:
+            flags.append(f"⚠️ Weak body ({body:.0f}%)")
+        if wick > 40:
+            flags.append(f"⚠️ Large wick ({wick:.0f}%)")
+        if brk_margin is not None and brk_margin < 0.5:
+            flags.append(f"⚠️ Marginal breakout (+{brk_margin:.1f}%)")
+        if trend_t > 0 and trend_g / trend_t < 0.4:
+            flags.append(f"⚠️ Weak trend ({trend_g}/{trend_t})")
+        if vol_ratio < 3.5:
+            flags.append(f"⚠️ Low volume ({vol_ratio:.1f}x)")
+
+        return flags
+
+    def _send_analysis_summary(
+        self, chat_id: str, signals: list, prices: dict
+    ) -> None:
+        valid = []
+        for sig in signals:
+            entry = sig.get("entry_price", 0)
+            current = prices.get(sig["symbol"], sig.get("current_price", 0))
+            highest = max(sig.get("highest_price", entry), current)
+            if entry > 0 and current > 0:
+                valid.append({
+                    "symbol": sig["symbol"],
+                    "cur_pct": self._calc_pct(entry, current),
+                    "high_pct": self._calc_pct(entry, highest),
+                    "vol_ratio": sig.get("vol_ratio", 0),
+                    "body_pct": sig.get("body_pct", 0),
+                    "trend_green": sig.get("trend_green", 0),
+                    "trend_total": sig.get("trend_total", 0),
+                    "brk_margin": sig.get("breakout_margin_pct"),
+                    "oi_pct": sig.get("oi_pct"),
+                })
+
+        if not valid:
+            return
+
+        total = len(valid)
+        winners = [v for v in valid if v["cur_pct"] > 0]
+        losers = [v for v in valid if v["cur_pct"] <= 0]
+
+        lines = [
+            "🔬 <b>ANALYSIS SUMMARY</b>",
+            "",
+            f"Total signals: {total}",
+            f"Winners: {len(winners)} ({len(winners)/total*100:.0f}%)",
+            f"Losers:  {len(losers)} ({len(losers)/total*100:.0f}%)",
+            "",
+        ]
+
+        # compare winners vs losers traits
+        if winners and losers:
+            lines.append("── <b>WINNER vs LOSER PATTERNS</b> ──")
+            lines.append("")
+
+            # average vol ratio
+            w_vol = sum(v["vol_ratio"] for v in winners) / len(winners)
+            l_vol = sum(v["vol_ratio"] for v in losers) / len(losers)
+            lines.append(f"Avg volume:   W {w_vol:.1f}x  vs  L {l_vol:.1f}x")
+
+            # average body (only those with data)
+            w_body = [v["body_pct"] for v in winners if v["body_pct"] > 0]
+            l_body = [v["body_pct"] for v in losers if v["body_pct"] > 0]
+            if w_body and l_body:
+                lines.append(
+                    f"Avg body:     W {sum(w_body)/len(w_body):.0f}%"
+                    f"  vs  L {sum(l_body)/len(l_body):.0f}%"
+                )
+
+            # average breakout margin
+            w_brk = [v["brk_margin"] for v in winners if v["brk_margin"] is not None]
+            l_brk = [v["brk_margin"] for v in losers if v["brk_margin"] is not None]
+            if w_brk and l_brk:
+                lines.append(
+                    f"Avg breakout: W +{sum(w_brk)/len(w_brk):.1f}%"
+                    f"  vs  L +{sum(l_brk)/len(l_brk):.1f}%"
+                )
+
+            # average trend
+            w_trend = [
+                v["trend_green"] / v["trend_total"]
+                for v in winners if v["trend_total"] > 0
+            ]
+            l_trend = [
+                v["trend_green"] / v["trend_total"]
+                for v in losers if v["trend_total"] > 0
+            ]
+            if w_trend and l_trend:
+                lines.append(
+                    f"Avg trend:    W {sum(w_trend)/len(w_trend)*100:.0f}% green"
+                    f"  vs  L {sum(l_trend)/len(l_trend)*100:.0f}% green"
+                )
+
+            # average OI
+            w_oi = [v["oi_pct"] for v in winners if v["oi_pct"] is not None]
+            l_oi = [v["oi_pct"] for v in losers if v["oi_pct"] is not None]
+            if w_oi and l_oi:
+                lines.append(
+                    f"Avg OI:       W +{sum(w_oi)/len(w_oi):.1f}%"
+                    f"  vs  L +{sum(l_oi)/len(l_oi):.1f}%"
+                )
+
+            lines.append("")
+            lines.append("💡 Compare patterns to tune your config filters")
+
+        self._send(chat_id, "\n".join(lines))
