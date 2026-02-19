@@ -1,16 +1,14 @@
 """
 Telegram Bot API helper.
 
-• Validates the token on first use.
-• Auto-retries on 429 (Telegram rate-limit).
-• Formats rich HTML alert messages.
+Sends enriched alert messages with candle quality,
+volume context, breakout margin, and trend data.
 """
 
 from __future__ import annotations
 
 import logging
 import time
-from typing import Optional
 
 import requests
 
@@ -25,8 +23,6 @@ class TelegramNotifier:
         self._chat_id = chat_id
         self._session = requests.Session()
         self._ok = False
-
-    # ── low level ────────────────────────────────────────────────────
 
     def _url(self, method: str) -> str:
         return self.API.format(token=self._token, method=method)
@@ -70,47 +66,93 @@ class TelegramNotifier:
                 time.sleep(2)
         return False
 
-    # ── high level ───────────────────────────────────────────────────
-
     def send_alert(self, data: dict) -> bool:
         return self.send(self._fmt_alert(data))
 
     def send_startup(self, summary: str) -> bool:
-        return self.send(f"🤖 <b>Volume Scanner Started</b>\n\n{summary}\n\nScanner is now running …")
-
-    # ── formatting ───────────────────────────────────────────────────
+        return self.send(
+            f"🤖 <b>Volume Scanner Started</b>\n\n{summary}\n\nScanner is now running …"
+        )
 
     @staticmethod
     def _fmt_alert(d: dict) -> str:
-        # breakout status
-        if not d.get("breakout_enabled"):
-            brk = "⚫ Disabled"
-        elif d.get("breakout_confirmed"):
-            brk = "✅ Yes"
-        else:
-            brk = "❌ No"
+        # candle quality
+        color_map = {"GREEN": "🟢", "RED": "🔴", "DOJI": "⚪"}
+        candle_color = d.get("candle_color", "")
+        color_icon = color_map.get(candle_color, "⚪")
+        body = d.get("body_pct", 0)
+        wick = d.get("upper_wick_pct", 0)
 
-        # OI status
+        # volume
+        vol_line = (
+            f"📊 <b>Volume:</b>  {d['vol_ratio']:.2f}x  "
+            f"({d.get('recent_vol_fmt', 'N/A')} vs {d.get('baseline_vol_fmt', 'N/A')} avg)"
+        )
+
+        # candle
+        candle_line = (
+            f"🕯  <b>Candle:</b>   {color_icon} {candle_color}  |  "
+            f"Body: {body:.0f}%  |  Wick: {wick:.0f}%"
+        )
+
+        # breakout
+        if not d.get("breakout_enabled"):
+            brk_line = "🔺 <b>Breakout:</b>  ⚫ Disabled"
+        elif d.get("breakout_confirmed"):
+            margin = d.get("breakout_margin_pct")
+            level = d.get("breakout_level")
+            if margin is not None and level is not None:
+                if level >= 1:
+                    brk_line = f"🔺 <b>Breakout:</b>  ✅ +{margin:.2f}% above ${level:.4f}"
+                else:
+                    brk_line = f"🔺 <b>Breakout:</b>  ✅ +{margin:.2f}% above ${level:.8f}"
+            else:
+                brk_line = "🔺 <b>Breakout:</b>  ✅ Yes"
+        else:
+            brk_line = "🔺 <b>Breakout:</b>  ❌ No"
+
+        # OI
         if not d.get("oi_enabled"):
-            oi = "⚫ Disabled"
+            oi_line = "📈 <b>OI Change:</b> ⚫ Disabled"
         elif d.get("oi_pct") is not None:
             pct = d["oi_pct"]
             icon = "📈" if pct >= 0 else "📉"
-            oi = f"{icon} {pct:+.2f}%"
+            oi_line = f"📈 <b>OI Change:</b> {icon} {pct:+.2f}%"
         else:
-            oi = "⚠️ Data N/A"
+            oi_line = "📈 <b>OI Change:</b> ⚠️ Data N/A"
 
-        return (
-            f"🚨 <b>VOLUME SPIKE ALERT</b>\n"
-            f"{'━' * 28}\n\n"
-            f"📌 <b>Symbol:</b>  {d['symbol']}\n"
-            f"⏱  <b>Timeframe:</b>  {d['timeframe']}\n"
-            f"💰 <b>Market Cap:</b>  {d['mcap']}\n"
-            f"📊 <b>Vol Ratio:</b>  {d['vol_ratio']:.2f}x  "
-            f"(threshold {d['vol_threshold']:.1f}x)\n"
-            f"🔺 <b>Breakout:</b>  {brk}\n"
-            f"📈 <b>OI Change:</b>  {oi}\n"
-            f"💵 <b>Price:</b>  ${d.get('price', 'N/A')}\n"
-            f"🕯  <b>Candle:</b>  {d['candle_time']}\n"
-            f"🕐 <b>Sent:</b>  {d['alert_time']}\n"
-        )
+        # trend
+        pattern = d.get("trend_pattern", "")
+        trend_g = d.get("trend_green", 0)
+        trend_t = d.get("trend_total", 0)
+        if pattern:
+            pattern_emoji = pattern.replace("G", "🟢").replace("R", "🔴")
+            trend_line = (
+                f"📊 <b>Trend:</b>    {trend_g}/{trend_t} green  {pattern_emoji}"
+            )
+        else:
+            trend_line = ""
+
+        parts = [
+            f"🚨 <b>VOLUME SPIKE ALERT</b>",
+            f"{'━' * 28}\n",
+            f"📌 <b>Symbol:</b>    {d['symbol']}",
+            f"⏱  <b>Timeframe:</b> {d['timeframe']}",
+            f"💰 <b>Market Cap:</b> {d['mcap']}",
+            f"💵 <b>Price:</b>     ${d.get('price', 'N/A')}",
+            "",
+            vol_line,
+            candle_line,
+            brk_line,
+            oi_line,
+        ]
+
+        if trend_line:
+            parts.append(trend_line)
+
+        parts.extend([
+            "",
+            f"🕐 <b>Sent:</b>     {d['alert_time']}",
+        ])
+
+        return "\n".join(parts)

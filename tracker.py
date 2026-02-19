@@ -1,12 +1,9 @@
 """
 Signal performance tracker.
 
-Stores every alert to disk, continuously tracks the highest price
-reached after the signal, and archives signals after a configurable
-max age (default 72 h).
-
-Thread-safe — called by the scanner thread (writes), the price-update
-thread (read/write), and the command-handler thread (reads).
+Stores every alert to disk with full enrichment data,
+continuously tracks the highest price, and archives
+signals after configurable max age (default 72 h).
 """
 
 from __future__ import annotations
@@ -43,7 +40,7 @@ class SignalTracker:
             self._max_age // 3600, self._update_interval, self._data_dir,
         )
 
-    # ── file I/O (always called under self._lock) ───────────────────
+    # ── file I/O ─────────────────────────────────────────────────────
 
     def _load(self, path: Path) -> list:
         if not path.exists():
@@ -68,24 +65,50 @@ class SignalTracker:
     # ── record new signal ────────────────────────────────────────────
 
     def record_signal(self, alert: dict) -> None:
-        """Called by scanner when an alert fires."""
         try:
             price = float(alert["price"]) if alert.get("price") not in (None, "N/A") else 0.0
         except (ValueError, TypeError):
             price = 0.0
 
         signal = {
-            "symbol":        alert["symbol"],
-            "entry_price":   price,
-            "highest_price": price,
-            "current_price": price,
-            "alert_time_ts": time.time(),
-            "alert_time":    datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
-            "mcap":          alert.get("mcap", "Unknown"),
-            "vol_ratio":     alert.get("vol_ratio", 0),
-            "breakout":      alert.get("breakout_confirmed"),
-            "oi_pct":        alert.get("oi_pct"),
-            "timeframe":     alert.get("timeframe", "1h"),
+            # core tracking fields
+            "symbol":         alert["symbol"],
+            "entry_price":    price,
+            "highest_price":  price,
+            "current_price":  price,
+            "alert_time_ts":  time.time(),
+            "alert_time":     datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+
+            # volume context
+            "timeframe":      alert.get("timeframe", "1h"),
+            "mcap":           alert.get("mcap", "Unknown"),
+            "vol_ratio":      alert.get("vol_ratio", 0),
+            "recent_vol_usdt":   alert.get("recent_vol_usdt", 0),
+            "baseline_vol_usdt": alert.get("baseline_vol_usdt", 0),
+            "recent_vol_fmt":    alert.get("recent_vol_fmt", "N/A"),
+            "baseline_vol_fmt":  alert.get("baseline_vol_fmt", "N/A"),
+
+            # candle quality
+            "candle_color":      alert.get("candle_color", "N/A"),
+            "body_pct":          alert.get("body_pct", 0),
+            "upper_wick_pct":    alert.get("upper_wick_pct", 0),
+            "lower_wick_pct":    alert.get("lower_wick_pct", 0),
+
+            # breakout
+            "breakout_confirmed": alert.get("breakout_confirmed"),
+            "breakout_level":     alert.get("breakout_level"),
+            "breakout_margin_pct": alert.get("breakout_margin_pct"),
+
+            # open interest
+            "oi_pct":            alert.get("oi_pct"),
+
+            # trend context
+            "trend_green":       alert.get("trend_green", 0),
+            "trend_total":       alert.get("trend_total", 0),
+            "trend_pattern":     alert.get("trend_pattern", ""),
+
+            # market context
+            "btc_price":         alert.get("btc_price"),
         }
 
         with self._lock:
@@ -98,7 +121,6 @@ class SignalTracker:
     # ── price updates ────────────────────────────────────────────────
 
     def apply_prices(self, prices: Dict[str, float]) -> None:
-        """Update current price and highest price for all active signals."""
         with self._lock:
             signals = self._load(self._signals_file)
             if not signals:
@@ -119,7 +141,6 @@ class SignalTracker:
                 self._save(self._signals_file, signals)
 
     def fetch_and_apply(self) -> None:
-        """Fetch mark prices from Binance and apply."""
         try:
             prices = self._binance.get_mark_prices()
             self.apply_prices(prices)
@@ -129,7 +150,6 @@ class SignalTracker:
     # ── archive expired signals ──────────────────────────────────────
 
     def archive_expired(self) -> int:
-        """Move signals older than max_age to history file."""
         now = time.time()
         with self._lock:
             signals = self._load(self._signals_file)
@@ -164,7 +184,7 @@ class SignalTracker:
 
         return archived
 
-    # ── data access (for command handler) ────────────────────────────
+    # ── data access ──────────────────────────────────────────────────
 
     def get_active_signals(self) -> List[dict]:
         now = time.time()
@@ -184,9 +204,7 @@ class SignalTracker:
 
     def run(self) -> None:
         self._running = True
-        logger.info(
-            "Tracker background loop started (every %ds)", self._update_interval
-        )
+        logger.info("Tracker background loop started (every %ds)", self._update_interval)
         while self._running:
             try:
                 self.fetch_and_apply()
