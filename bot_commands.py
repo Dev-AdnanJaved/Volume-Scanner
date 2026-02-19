@@ -2,8 +2,8 @@
 Telegram command listener.
 
 Commands:
-  /report          — all active signals with enriched details
-  /report SYMBOL   — detailed single-coin breakdown
+  /report          — all active signals with performance
+  /report SYMBOL   — detailed single-coin breakdown with diagnosis
   /summary         — win rate, averages, best/worst
   /active          — quick list of tracked symbols
   /help            — command reference
@@ -120,33 +120,35 @@ class TelegramCommandListener:
 
     @staticmethod
     def _fmt_pct(pct: float) -> str:
-        icon = "📈" if pct >= 0 else "📉"
+        icon = "🟢" if pct > 0 else "🔴" if pct < 0 else "⚪"
         return f"{icon} {pct:+.2f}%"
 
     @staticmethod
     def _fmt_age(ts: float) -> str:
         age = time.time() - ts
         if age < 3600:
-            return f"{int(age / 60)}m ago"
+            return f"{int(age / 60)}m"
         hours = int(age // 3600)
         mins = int((age % 3600) // 60)
-        return f"{hours}h {mins}m ago"
-
-    @staticmethod
-    def _fmt_vol(vol: float) -> str:
-        if vol >= 1e9:
-            return f"${vol / 1e9:.1f}B"
-        if vol >= 1e6:
-            return f"${vol / 1e6:.1f}M"
-        if vol >= 1e3:
-            return f"${vol / 1e3:.0f}K"
-        return f"${vol:.0f}"
+        return f"{hours}h {mins}m"
 
     @staticmethod
     def _calc_pct(entry: float, current: float) -> float:
         if entry <= 0:
             return 0.0
         return ((current - entry) / entry) * 100.0
+
+    @staticmethod
+    def _result_emoji(pct: float) -> str:
+        if pct >= 10:
+            return "🚀"
+        if pct >= 5:
+            return "✅"
+        if pct >= 0:
+            return "🟢"
+        if pct >= -5:
+            return "🟡"
+        return "🔴"
 
     @staticmethod
     def _pattern_emoji(pattern: str) -> str:
@@ -191,7 +193,6 @@ class TelegramCommandListener:
 
         if chat_id != self._chat_id:
             return
-
         if not text.startswith("/"):
             return
 
@@ -213,7 +214,7 @@ class TelegramCommandListener:
         if handler:
             handler()
         else:
-            self._send(chat_id, "❓ Unknown command. Send /help for available commands.")
+            self._send(chat_id, "❓ Unknown command. Send /help")
 
     # ── /report (all signals) ────────────────────────────────────────
 
@@ -226,26 +227,27 @@ class TelegramCommandListener:
 
         signals = self._tracker.get_active_signals()
         if not signals:
-            self._send(chat_id, "📊 No active signals in tracking window.")
+            self._send(chat_id, "📊 No active signals.")
             return
 
-        # single symbol — detailed view
+        # single symbol → detailed view
         if args:
             sym = args[0].upper()
             if not sym.endswith("USDT"):
                 sym += "USDT"
             matches = [s for s in signals if s["symbol"] == sym]
             if not matches:
-                self._send(chat_id, f"📊 No active signals found for <b>{sym}</b>")
+                self._send(chat_id, f"📊 No active signal for <b>{sym}</b>")
                 return
             for sig in matches:
                 self._send_detailed_report(chat_id, sig, prices)
             return
 
-        # all signals — condensed view
+        # all signals → clean compact view
         signals.sort(key=lambda s: s["alert_time_ts"], reverse=True)
 
-        lines = ["📊 <b>SIGNAL PERFORMANCE REPORT</b>", "━" * 28, ""]
+        lines = ["📊 <b>PERFORMANCE REPORT</b>", ""]
+
         valid_changes: list[float] = []
         valid_highest: list[float] = []
 
@@ -254,19 +256,11 @@ class TelegramCommandListener:
             entry = sig.get("entry_price", 0)
             highest = sig.get("highest_price", entry)
             current = prices.get(sym, sig.get("current_price", 0))
-
             if current > highest:
                 highest = current
 
             age = self._fmt_age(sig["alert_time_ts"])
-            color = self._color_emoji(sig.get("candle_color", ""))
-            body = sig.get("body_pct", 0)
-            wick = sig.get("upper_wick_pct", 0)
             vol_r = sig.get("vol_ratio", 0)
-            vol_fmt = sig.get("recent_vol_fmt", "N/A")
-            trend_g = sig.get("trend_green", 0)
-            trend_t = sig.get("trend_total", 0)
-            brk_margin = sig.get("breakout_margin_pct")
 
             if entry > 0 and current > 0:
                 cur_pct = self._calc_pct(entry, current)
@@ -274,64 +268,45 @@ class TelegramCommandListener:
                 valid_changes.append(cur_pct)
                 valid_highest.append(high_pct)
 
-                lines.append(f"📌 <b>{sym}</b>")
+                emoji = self._result_emoji(cur_pct)
+
                 lines.append(
-                    f"   {self._fmt_price(entry)} → "
-                    f"Now: {self._fmt_price(current)} ({self._fmt_pct(cur_pct)})"
+                    f"{emoji} <b>{sym}</b>  •  {age}"
                 )
                 lines.append(
-                    f"   Peak: {self._fmt_price(highest)} ({self._fmt_pct(high_pct)})"
+                    f"   Now: {cur_pct:+.2f}%  │  Peak: {high_pct:+.2f}%  │  Vol: {vol_r:.1f}x"
                 )
-
-                detail_parts = [f"{color} body:{body:.0f}% wick:{wick:.0f}%"]
-                detail_parts.append(f"Vol: {vol_r:.1f}x ({vol_fmt})")
-                if trend_t > 0:
-                    detail_parts.append(f"Trend: {trend_g}/{trend_t}🟢")
-                lines.append(f"   {' | '.join(detail_parts)}")
-
-                extra = []
-                if brk_margin is not None:
-                    extra.append(f"Brk: +{brk_margin:.1f}%")
-                oi = sig.get("oi_pct")
-                if oi is not None:
-                    extra.append(f"OI: +{oi:.1f}%")
-                extra.append(f"Age: {age}")
-                lines.append(f"   {' | '.join(extra)}")
                 lines.append("")
             else:
-                lines.append(f"📌 <b>{sym}</b> — entry price N/A — {age}")
+                lines.append(f"⚪ <b>{sym}</b>  •  {age}  •  No price data")
                 lines.append("")
 
+        # footer
         if valid_changes:
             total = len(valid_changes)
             avg_cur = sum(valid_changes) / total
             avg_high = sum(valid_highest) / total
             winners = sum(1 for c in valid_changes if c > 0)
-            peak_winners = sum(1 for h in valid_highest if h > 2)
+            peak_w = sum(1 for h in valid_highest if h > 2)
 
-            lines.append("─" * 28)
-            lines.append(f"📡 Active: {total} signals")
-            lines.append(f"📊 Avg now:  {self._fmt_pct(avg_cur)}")
-            lines.append(f"🏔  Avg peak: {self._fmt_pct(avg_high)}")
-            lines.append(
-                f"🎯 Win now:  {winners}/{total} ({winners / total * 100:.0f}%)"
-            )
-            lines.append(
-                f"🎯 Win peak(>2%): {peak_winners}/{total} ({peak_winners / total * 100:.0f}%)"
-            )
+            lines.append("━" * 26)
+            lines.append(f"📡 Signals:    {total}")
+            lines.append(f"📊 Avg now:    {avg_cur:+.2f}%")
+            lines.append(f"🏔  Avg peak:   {avg_high:+.2f}%")
+            lines.append(f"🎯 Win now:    {winners}/{total} ({winners/total*100:.0f}%)")
+            lines.append(f"🎯 Win peak:   {peak_w}/{total} ({peak_w/total*100:.0f}%)")
+            lines.append("")
+            lines.append("💡 /report SYMBOL for details")
 
         self._send(chat_id, "\n".join(lines))
 
     # ── detailed single-coin report ──────────────────────────────────
 
-    def _send_detailed_report(
-        self, chat_id: str, sig: dict, prices: dict
-    ) -> None:
+    def _send_detailed_report(self, chat_id: str, sig: dict, prices: dict) -> None:
         sym = sig["symbol"]
         entry = sig.get("entry_price", 0)
         highest = sig.get("highest_price", entry)
         current = prices.get(sym, sig.get("current_price", 0))
-
         if current > highest:
             highest = current
 
@@ -340,76 +315,86 @@ class TelegramCommandListener:
         age = self._fmt_age(sig["alert_time_ts"])
 
         lines = [
-            f"📊 <b>DETAILED REPORT — {sym}</b>",
-            "━" * 28,
+            f"📊 <b>{sym} — DETAILED</b>",
             "",
-            "<b>💵 Price Performance</b>",
-            f"   Entry:    {self._fmt_price(entry)}",
-            f"   Current:  {self._fmt_price(current)}  ({self._fmt_pct(cur_pct)})",
-            f"   Highest:  {self._fmt_price(highest)}  ({self._fmt_pct(high_pct)})",
-            f"   Age:      {age}",
-            "",
-            "<b>🕯 Candle Quality</b>",
-            f"   Color:       {self._color_emoji(sig.get('candle_color', ''))} {sig.get('candle_color', 'N/A')}",
-            f"   Body:        {sig.get('body_pct', 0):.1f}% of range",
-            f"   Upper Wick:  {sig.get('upper_wick_pct', 0):.1f}% of range",
-            f"   Lower Wick:  {sig.get('lower_wick_pct', 0):.1f}% of range",
-            "",
-            "<b>📊 Volume</b>",
-            f"   Ratio:     {sig.get('vol_ratio', 0):.2f}x",
-            f"   Recent:    {sig.get('recent_vol_fmt', 'N/A')} avg",
-            f"   Baseline:  {sig.get('baseline_vol_fmt', 'N/A')} avg",
-            "",
+            "━━━ 💵 PRICE ━━━",
+            f"Entry:     {self._fmt_price(entry)}",
+            f"Current:   {self._fmt_price(current)}   {self._fmt_pct(cur_pct)}",
+            f"Highest:   {self._fmt_price(highest)}   {self._fmt_pct(high_pct)}",
+            f"Age:       {age}",
         ]
 
-        # breakout section
-        brk_level = sig.get("breakout_level")
-        brk_margin = sig.get("breakout_margin_pct")
-        if sig.get("breakout_confirmed"):
-            lines.append("<b>🔺 Breakout</b>")
-            lines.append(
-                f"   Level:   {self._fmt_price(brk_level)}"
-                if brk_level else "   Level:   N/A"
-            )
-            lines.append(
-                f"   Margin:  +{brk_margin:.2f}% above level"
-                if brk_margin is not None else "   Margin:  N/A"
-            )
-            lines.append("")
+        # candle quality (only if data exists)
+        candle_color = sig.get("candle_color", "")
+        body = sig.get("body_pct", 0)
+        wick = sig.get("upper_wick_pct", 0)
+        has_candle_data = candle_color and (body > 0 or wick > 0)
 
-        # OI section
+        if has_candle_data:
+            lines.append("")
+            lines.append("━━━ 🕯 CANDLE QUALITY ━━━")
+            lines.append(f"Color:       {self._color_emoji(candle_color)} {candle_color}")
+            lines.append(f"Body size:   {body:.0f}%")
+            lines.append(f"Upper wick:  {wick:.0f}%")
+            lwick = sig.get("lower_wick_pct", 0)
+            if lwick > 0:
+                lines.append(f"Lower wick:  {lwick:.0f}%")
+
+        # volume
+        lines.append("")
+        lines.append("━━━ 📊 VOLUME ━━━")
+        lines.append(f"Spike:       {sig.get('vol_ratio', 0):.2f}x")
+        recent_fmt = sig.get("recent_vol_fmt")
+        baseline_fmt = sig.get("baseline_vol_fmt")
+        if recent_fmt and recent_fmt != "N/A":
+            lines.append(f"Recent avg:  {recent_fmt}")
+            lines.append(f"Normal avg:  {baseline_fmt}")
+
+        # breakout
+        brk_margin = sig.get("breakout_margin_pct")
+        brk_level = sig.get("breakout_level")
+        if sig.get("breakout_confirmed"):
+            lines.append("")
+            lines.append("━━━ 🔺 BREAKOUT ━━━")
+            if brk_level:
+                lines.append(f"Level:       {self._fmt_price(brk_level)}")
+            if brk_margin is not None:
+                lines.append(f"Margin:      +{brk_margin:.2f}%")
+
+        # open interest
         oi = sig.get("oi_pct")
         if oi is not None:
-            lines.append("<b>📈 Open Interest</b>")
-            lines.append(f"   Change:  {self._fmt_pct(oi)}")
             lines.append("")
+            lines.append("━━━ 📈 OPEN INTEREST ━━━")
+            lines.append(f"Change:      {oi:+.2f}%")
 
-        # trend section
+        # trend
         pattern = sig.get("trend_pattern", "")
         trend_g = sig.get("trend_green", 0)
         trend_t = sig.get("trend_total", 0)
         if pattern:
-            lines.append("<b>📊 Trend Context</b>")
-            lines.append(
-                f"   Last {trend_t} candles: {trend_g}/{trend_t} green  "
-                f"{self._pattern_emoji(pattern)}"
-            )
+            lines.append("")
+            lines.append("━━━ 📊 TREND ━━━")
+            lines.append(f"Pattern:     {self._pattern_emoji(pattern)}")
+            lines.append(f"Green:       {trend_g}/{trend_t}")
 
         # BTC context
-        btc_at_signal = sig.get("btc_price")
+        btc_at = sig.get("btc_price")
         btc_now = prices.get("BTCUSDT")
-        if btc_at_signal and btc_now:
-            btc_chg = self._calc_pct(btc_at_signal, btc_now)
+        if btc_at and btc_now:
+            btc_chg = self._calc_pct(btc_at, btc_now)
+            lines.append("")
+            lines.append("━━━ ₿ MARKET ━━━")
             lines.append(
-                f"   BTC:  {self._fmt_price(btc_at_signal)} → "
-                f"{self._fmt_price(btc_now)} ({self._fmt_pct(btc_chg)})"
+                f"BTC:  {self._fmt_price(btc_at)} → {self._fmt_price(btc_now)}"
+                f"  ({btc_chg:+.2f}%)"
             )
 
         lines.append("")
-        lines.append(f"💰 Market Cap: {sig.get('mcap', 'Unknown')}")
+        lines.append(f"💰 MCap: {sig.get('mcap', 'Unknown')}")
         lines.append(f"🕐 Signal: {sig.get('alert_time', 'N/A')}")
 
-        # diagnosis hint
+        # diagnosis
         lines.append("")
         lines.append(self._diagnosis(sig, cur_pct, high_pct))
 
@@ -419,7 +404,6 @@ class TelegramCommandListener:
 
     @staticmethod
     def _diagnosis(sig: dict, cur_pct: float, high_pct: float) -> str:
-        """Generate a brief diagnostic hint based on signal data."""
         hints: list[str] = []
 
         wick = sig.get("upper_wick_pct", 0)
@@ -428,40 +412,55 @@ class TelegramCommandListener:
         trend_g = sig.get("trend_green", 0)
         trend_t = sig.get("trend_total", 5)
         vol_ratio = sig.get("vol_ratio", 0)
+        candle_color = sig.get("candle_color", "")
 
+        # performance based
         if high_pct > 5 and cur_pct < 0:
-            hints.append("⚠️ Pumped then dumped — possible distribution")
+            hints.append("⚠️ Pumped then dumped — distribution likely")
         elif high_pct < 1 and cur_pct < -3:
-            hints.append("⚠️ Never pumped — signal may have been late entry")
+            hints.append("⚠️ Never pumped — weak entry / late signal")
+        elif cur_pct > 10:
+            hints.append("🚀 Strong winner — momentum confirmed")
+        elif cur_pct > 5:
+            hints.append("✅ Profitable — signal working well")
 
-        if wick > 40:
-            hints.append(f"⚠️ High upper wick ({wick:.0f}%) — selling pressure at signal")
+        # candle quality based (only if data exists)
+        if candle_color == "RED":
+            hints.append("⚠️ RED candle signal — selling volume")
 
-        if body < 35:
-            hints.append(f"⚠️ Small body ({body:.0f}%) — weak conviction candle")
+        if wick > 40 and wick > 0:
+            hints.append(f"⚠️ Upper wick {wick:.0f}% — sellers rejected the high")
 
-        if brk_margin is not None and brk_margin < 0.5:
-            hints.append(f"⚠️ Marginal breakout (+{brk_margin:.1f}%) — barely broke out")
-        elif brk_margin is not None and brk_margin > 3:
-            hints.append(f"✅ Strong breakout (+{brk_margin:.1f}%)")
+        if 0 < body < 35:
+            hints.append(f"⚠️ Body only {body:.0f}% — weak conviction")
+        elif body >= 60:
+            hints.append(f"✅ Strong body {body:.0f}% — decisive move")
 
-        if trend_t > 0 and trend_g / trend_t < 0.4:
-            hints.append(f"⚠️ Weak trend ({trend_g}/{trend_t} green) — counter-trend signal")
-        elif trend_t > 0 and trend_g / trend_t >= 0.8:
-            hints.append(f"✅ Strong trend ({trend_g}/{trend_t} green)")
+        # breakout quality
+        if brk_margin is not None:
+            if brk_margin < 0.5:
+                hints.append(f"⚠️ Barely broke out (+{brk_margin:.1f}%) — risky")
+            elif brk_margin > 3:
+                hints.append(f"✅ Clean breakout (+{brk_margin:.1f}%)")
 
+        # trend based
+        if trend_t > 0:
+            ratio = trend_g / trend_t
+            if ratio < 0.4:
+                hints.append(f"⚠️ Weak trend ({trend_g}/{trend_t} green)")
+            elif ratio >= 0.8:
+                hints.append(f"✅ Strong trend ({trend_g}/{trend_t} green)")
+
+        # volume
         if vol_ratio > 10:
-            hints.append(f"✅ Extreme volume ({vol_ratio:.0f}x) — high conviction")
+            hints.append(f"✅ Extreme volume ({vol_ratio:.0f}x)")
         elif vol_ratio < 3.5:
-            hints.append(f"⚠️ Volume barely above threshold ({vol_ratio:.1f}x)")
-
-        if cur_pct > 5:
-            hints.append(f"✅ Currently profitable ({cur_pct:+.1f}%)")
+            hints.append(f"⚠️ Volume barely met threshold ({vol_ratio:.1f}x)")
 
         if not hints:
-            hints.append("ℹ️ Signal looks normal — no strong flags")
+            hints.append("ℹ️ No strong flags — normal signal")
 
-        return "<b>🔍 Diagnosis</b>\n" + "\n".join(f"   {h}" for h in hints)
+        return "━━━ 🔍 DIAGNOSIS ━━━\n" + "\n".join(hints)
 
     # ── /summary ─────────────────────────────────────────────────────
 
@@ -475,9 +474,8 @@ class TelegramCommandListener:
         signals = self._tracker.get_active_signals()
         history = self._tracker.get_history()
 
-        lines = ["📊 <b>PERFORMANCE SUMMARY</b>", "━" * 28, ""]
+        lines = ["📊 <b>SUMMARY</b>", ""]
 
-        # active signals
         active_valid = [s for s in signals if s.get("entry_price", 0) > 0]
         if active_valid:
             changes: list[float] = []
@@ -498,73 +496,46 @@ class TelegramCommandListener:
             worst_i = changes.index(min(changes))
             best_h_i = highest_changes.index(max(highest_changes))
 
-            # quality breakdown
-            strong_body = sum(
-                1 for s in active_valid if s.get("body_pct", 0) >= 50
-            )
-            strong_trend = sum(
-                1 for s in active_valid
-                if s.get("trend_total", 0) > 0
-                and s.get("trend_green", 0) / s["trend_total"] >= 0.6
-            )
+            lines.append(f"━━━ 📡 ACTIVE ({len(active_valid)}) ━━━")
+            lines.append(f"Avg now:    {sum(changes)/len(changes):+.2f}%")
+            lines.append(f"Avg peak:   {sum(highest_changes)/len(highest_changes):+.2f}%")
+            lines.append(f"Win now:    {winners}/{len(active_valid)} ({winners/len(active_valid)*100:.0f}%)")
+            lines.append(f"Win peak:   {peak_w}/{len(active_valid)} ({peak_w/len(active_valid)*100:.0f}%)")
+            lines.append("")
+            lines.append(f"🚀 Best:     {active_valid[best_i]['symbol']} {changes[best_i]:+.2f}%")
+            lines.append(f"🔴 Worst:    {active_valid[worst_i]['symbol']} {changes[worst_i]:+.2f}%")
+            lines.append(f"🏔  Top peak:  {active_valid[best_h_i]['symbol']} {highest_changes[best_h_i]:+.2f}%")
 
-            lines.append(f"<b>📡 Active Signals ({len(active_valid)})</b>")
-            lines.append(f"   Avg Current:  {self._fmt_pct(sum(changes) / len(changes))}")
-            lines.append(
-                f"   Avg Peak:     "
-                f"{self._fmt_pct(sum(highest_changes) / len(highest_changes))}"
-            )
-            lines.append(
-                f"   Win Now:      {winners}/{len(active_valid)}"
-                f" ({winners / len(active_valid) * 100:.0f}%)"
-            )
-            lines.append(
-                f"   Win Peak>2%:  {peak_w}/{len(active_valid)}"
-                f" ({peak_w / len(active_valid) * 100:.0f}%)"
-            )
-            lines.append(
-                f"   Best Now:     {active_valid[best_i]['symbol']}"
-                f"  {self._fmt_pct(changes[best_i])}"
-            )
-            lines.append(
-                f"   Worst Now:    {active_valid[worst_i]['symbol']}"
-                f"  {self._fmt_pct(changes[worst_i])}"
-            )
-            lines.append(
-                f"   Best Peak:    {active_valid[best_h_i]['symbol']}"
-                f"  {self._fmt_pct(highest_changes[best_h_i])}"
-            )
-            lines.append("")
-            lines.append("<b>📋 Signal Quality Breakdown</b>")
-            lines.append(f"   Strong body (≥50%):   {strong_body}/{len(active_valid)}")
-            lines.append(f"   Strong trend (≥60%):  {strong_trend}/{len(active_valid)}")
-            lines.append("")
+            # quality breakdown
+            has_quality = [s for s in active_valid if s.get("body_pct", 0) > 0]
+            if has_quality:
+                strong_body = sum(1 for s in has_quality if s.get("body_pct", 0) >= 50)
+                strong_trend = sum(
+                    1 for s in has_quality
+                    if s.get("trend_total", 0) > 0
+                    and s.get("trend_green", 0) / s["trend_total"] >= 0.6
+                )
+                lines.append("")
+                lines.append(f"━━━ 📋 QUALITY ━━━")
+                lines.append(f"Strong body:   {strong_body}/{len(has_quality)}")
+                lines.append(f"Strong trend:  {strong_trend}/{len(has_quality)}")
         else:
             lines.append("📡 No active signals")
-            lines.append("")
 
-        # history
+        lines.append("")
+
         if history:
             exit_pcts = [h["exit_pct"] for h in history if h.get("exit_pct") is not None]
             high_pcts = [h["highest_pct"] for h in history if h.get("highest_pct") is not None]
             if exit_pcts:
-                h_winners = sum(1 for p in exit_pcts if p > 0)
-                lines.append(f"<b>📜 History ({len(history)} signals)</b>")
-                lines.append(
-                    f"   Avg Exit:  {self._fmt_pct(sum(exit_pcts) / len(exit_pcts))}"
-                )
+                h_win = sum(1 for p in exit_pcts if p > 0)
+                lines.append(f"━━━ 📜 HISTORY ({len(history)}) ━━━")
+                lines.append(f"Avg exit:   {sum(exit_pcts)/len(exit_pcts):+.2f}%")
                 if high_pcts:
-                    lines.append(
-                        f"   Avg Peak:  {self._fmt_pct(sum(high_pcts) / len(high_pcts))}"
-                    )
-                lines.append(
-                    f"   Win Rate:  {h_winners}/{len(exit_pcts)}"
-                    f" ({h_winners / len(exit_pcts) * 100:.0f}%)"
-                )
-            else:
-                lines.append(f"📜 History: {len(history)} signals (no exit data)")
+                    lines.append(f"Avg peak:   {sum(high_pcts)/len(high_pcts):+.2f}%")
+                lines.append(f"Win rate:   {h_win}/{len(exit_pcts)} ({h_win/len(exit_pcts)*100:.0f}%)")
         else:
-            lines.append("📜 No historical signals yet")
+            lines.append("📜 No history yet")
 
         self._send(chat_id, "\n".join(lines))
 
@@ -573,43 +544,37 @@ class TelegramCommandListener:
     def _cmd_active(self, chat_id: str) -> None:
         signals = self._tracker.get_active_signals()
         if not signals:
-            self._send(chat_id, "📡 No active signals being tracked.")
+            self._send(chat_id, "📡 No active signals.")
             return
 
         signals.sort(key=lambda s: s["alert_time_ts"], reverse=True)
 
-        lines = [
-            f"📡 <b>ACTIVE SIGNALS ({len(signals)})</b>",
-            "━" * 28,
-            "",
-        ]
+        lines = [f"📡 <b>ACTIVE ({len(signals)})</b>", ""]
+
         for sig in signals:
             age = self._fmt_age(sig["alert_time_ts"])
-            color = self._color_emoji(sig.get("candle_color", ""))
+            sym = sig["symbol"]
             vol = sig.get("vol_ratio", 0)
-            lines.append(
-                f"• <b>{sig['symbol']}</b>  {color}  {age}  "
-                f"{vol:.1f}x  {sig.get('mcap', '?')}"
-            )
+            mcap = sig.get("mcap", "?")
+            lines.append(f"• <b>{sym}</b>  {age}  {vol:.1f}x  {mcap}")
 
         lines.append("")
-        lines.append(f"Window: {self._tracker.max_age_hours}h | Send /report SYMBOL for details")
+        lines.append(f"Window: {self._tracker.max_age_hours}h")
+        lines.append("/report SYMBOL for details")
         self._send(chat_id, "\n".join(lines))
 
     # ── /help ────────────────────────────────────────────────────────
 
     def _cmd_help(self, chat_id: str) -> None:
         text = (
-            "🤖 <b>VOLUME SCANNER COMMANDS</b>\n"
-            + "━" * 28
-            + "\n\n"
-            "/report — All signals with performance + context\n"
-            "/report SYMBOL — Detailed breakdown + auto diagnosis\n"
-            "/summary — Win rates, averages, quality stats\n"
-            "/active — Quick list of tracked signals\n"
-            "/help — Show this message\n\n"
-            f"💡 Signals tracked for {self._tracker.max_age_hours}h\n"
-            "🏔 Highest price updated every 5 min\n"
-            "🔍 Single-coin report includes auto diagnosis"
+            "🤖 <b>COMMANDS</b>\n\n"
+            "/report — All signals + performance\n"
+            "/report ARC — Detailed + diagnosis\n"
+            "/summary — Stats + win rates\n"
+            "/active — Quick signal list\n"
+            "/help — This message\n\n"
+            f"📡 Tracking window: {self._tracker.max_age_hours}h\n"
+            "🏔 Prices update every 5 min\n"
+            "🔍 /report SYMBOL for diagnosis"
         )
         self._send(chat_id, text)
