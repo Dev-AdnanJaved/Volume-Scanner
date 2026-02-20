@@ -2,9 +2,9 @@
 Binance USDT-M Futures Volume Scanner — Entry Point.
 
 Starts three concurrent components:
-  1. Scanner          — main loop, scans all pairs every cycle
-  2. Signal Tracker   — background price updater for performance monitoring
-  3. Command Listener — Telegram bot command handler (/report, /summary, etc.)
+  1. Scanner          — scans all pairs every cycle
+  2. Signal Tracker   — background price updater + take-profit alerts
+  3. Command Listener — Telegram bot command handler
 """
 
 import json
@@ -16,12 +16,11 @@ import time
 from pathlib import Path
 
 from binance_client import BinanceClient
+from notifier import TelegramNotifier
 from scanner import Scanner
 from tracker import SignalTracker
 from bot_commands import TelegramCommandListener
 
-
-# ── helpers ──────────────────────────────────────────────────────────
 
 def load_config(path: str = "config.json") -> dict:
     cfg_path = Path(path)
@@ -56,12 +55,10 @@ def validate_config(cfg: dict) -> None:
         value = cfg.get(section, {}).get(key, "")
         if not value or value.startswith("YOUR_"):
             logging.getLogger("main").error(
-                "config.json  [%s][%s] is not set — please fill it in.", section, key
+                "config.json  [%s][%s] is not set.", section, key
             )
             sys.exit(1)
 
-
-# ── main ─────────────────────────────────────────────────────────────
 
 def main() -> None:
     config = load_config()
@@ -73,7 +70,7 @@ def main() -> None:
     logger.info("  Binance Futures Volume Scanner  —  starting")
     logger.info("=" * 60)
 
-    # shared Binance client
+    # shared binance client
     rl = config.get("rate_limit", {})
     binance = BinanceClient(
         api_key=config["binance"].get("api_key", ""),
@@ -81,25 +78,30 @@ def main() -> None:
         delay_ms=rl.get("binance_delay_ms", 100),
     )
 
-    # signal tracker (optional)
+    # shared telegram notifier
+    notifier = TelegramNotifier(
+        bot_token=config["telegram"]["bot_token"],
+        chat_id=config["telegram"]["chat_id"],
+    )
+    if not notifier.validate():
+        logger.error("Telegram validation failed — aborting.")
+        sys.exit(1)
+
+    # tracker (optional)
     tracker_cfg = config.get("tracker", {})
-    tracker: SignalTracker | None = None
-    tracker_thread: threading.Thread | None = None
-    cmd_listener: TelegramCommandListener | None = None
-    cmd_thread: threading.Thread | None = None
+    tracker = None
+    tracker_thread = None
+    cmd_listener = None
+    cmd_thread = None
 
     if tracker_cfg.get("enabled", False):
-        tracker = SignalTracker(config, binance)
+        tracker = SignalTracker(config, binance, notifier)
 
-        # background price updater thread
         tracker_thread = threading.Thread(
-            target=tracker.run,
-            name="tracker",
-            daemon=True,
+            target=tracker.run, name="tracker", daemon=True,
         )
         tracker_thread.start()
 
-        # telegram command listener thread
         cmd_listener = TelegramCommandListener(
             bot_token=config["telegram"]["bot_token"],
             chat_id=config["telegram"]["chat_id"],
@@ -107,19 +109,16 @@ def main() -> None:
             binance=binance,
         )
         cmd_thread = threading.Thread(
-            target=cmd_listener.run,
-            name="commands",
-            daemon=True,
+            target=cmd_listener.run, name="commands", daemon=True,
         )
         cmd_thread.start()
         logger.info("Tracker + command listener started")
     else:
-        logger.info("Tracker disabled — no performance tracking or commands")
+        logger.info("Tracker disabled")
 
-    # scanner (runs on main thread)
-    scanner = Scanner(config, binance, tracker)
+    # scanner (main thread)
+    scanner = Scanner(config, binance, notifier, tracker)
 
-    # graceful shutdown
     def _shutdown(sig, _frame):
         logger.info("Received signal %s — shutting down …", sig)
         scanner.stop()

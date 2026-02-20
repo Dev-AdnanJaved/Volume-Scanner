@@ -1,9 +1,12 @@
 """
-Signal performance tracker.
+Signal performance tracker with take-profit alerts.
 
-Stores every alert to disk with full enrichment data,
-continuously tracks the highest price, and archives
-signals after configurable max age (default 72 h).
+Responsibilities:
+  - Store every alert to disk with full enrichment
+  - Continuously track highest price
+  - Send take-profit target alerts when price hits configurable levels
+  - Send reversal warnings when price drops significantly from peak
+  - Archive signals after configurable max age
 """
 
 from __future__ import annotations
@@ -14,30 +17,45 @@ import time
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from binance_client import BinanceClient
+from notifier import TelegramNotifier
 
 logger = logging.getLogger(__name__)
 
 
 class SignalTracker:
 
-    def __init__(self, config: dict, binance: BinanceClient) -> None:
+    def __init__(
+        self,
+        config: dict,
+        binance: BinanceClient,
+        notifier: TelegramNotifier,
+    ) -> None:
         tc = config.get("tracker", {})
         self._max_age = tc.get("max_age_hours", 72) * 3600
         self._update_interval = tc.get("price_update_interval_seconds", 300)
         self._data_dir = Path(tc.get("data_dir", "data"))
         self._signals_file = self._data_dir / "signals.json"
         self._history_file = self._data_dir / "history.json"
+
+        # take-profit settings
+        self._tp_targets: List[int] = sorted(tc.get("take_profit_targets", [3, 5, 10, 15, 20]))
+        self._reversal_enabled: bool = tc.get("reversal_alert_enabled", True)
+        self._min_reversal_peak: float = tc.get("min_reversal_peak_pct", 3.0)
+        self._reversal_drop: float = tc.get("reversal_drop_from_peak_pct", 5.0)
+
         self._binance = binance
+        self._notifier = notifier
         self._lock = threading.Lock()
         self._running = False
 
         self._data_dir.mkdir(parents=True, exist_ok=True)
         logger.info(
-            "Tracker initialised  (max_age=%dh, update=%ds, dir=%s)",
-            self._max_age // 3600, self._update_interval, self._data_dir,
+            "Tracker initialised  (max_age=%dh, update=%ds, TP targets=%s, reversal=%s)",
+            self._max_age // 3600, self._update_interval,
+            self._tp_targets, self._reversal_enabled,
         )
 
     # ── file I/O ─────────────────────────────────────────────────────
@@ -62,6 +80,17 @@ class SignalTracker:
         except IOError as exc:
             logger.error("Failed to write %s: %s", path, exc)
 
+    # ── age formatting ───────────────────────────────────────────────
+
+    @staticmethod
+    def _fmt_age(ts: float) -> str:
+        age = time.time() - ts
+        if age < 3600:
+            return f"{int(age / 60)}m"
+        hours = int(age // 3600)
+        mins = int((age % 3600) // 60)
+        return f"{hours}h {mins}m"
+
     # ── record new signal ────────────────────────────────────────────
 
     def record_signal(self, alert: dict) -> None:
@@ -71,44 +100,34 @@ class SignalTracker:
             price = 0.0
 
         signal = {
-            # core tracking fields
-            "symbol":         alert["symbol"],
-            "entry_price":    price,
-            "highest_price":  price,
-            "current_price":  price,
-            "alert_time_ts":  time.time(),
-            "alert_time":     datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
-
-            # volume context
-            "timeframe":      alert.get("timeframe", "1h"),
-            "mcap":           alert.get("mcap", "Unknown"),
-            "vol_ratio":      alert.get("vol_ratio", 0),
-            "recent_vol_usdt":   alert.get("recent_vol_usdt", 0),
-            "baseline_vol_usdt": alert.get("baseline_vol_usdt", 0),
-            "recent_vol_fmt":    alert.get("recent_vol_fmt", "N/A"),
-            "baseline_vol_fmt":  alert.get("baseline_vol_fmt", "N/A"),
-
-            # candle quality
-            "candle_color":      alert.get("candle_color", "N/A"),
-            "body_pct":          alert.get("body_pct", 0),
-            "upper_wick_pct":    alert.get("upper_wick_pct", 0),
-            "lower_wick_pct":    alert.get("lower_wick_pct", 0),
-
-            # breakout
-            "breakout_confirmed": alert.get("breakout_confirmed"),
-            "breakout_level":     alert.get("breakout_level"),
+            "symbol":              alert["symbol"],
+            "entry_price":         price,
+            "highest_price":       price,
+            "current_price":       price,
+            "alert_time_ts":       time.time(),
+            "alert_time":          datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+            "timeframe":           alert.get("timeframe", "1h"),
+            "mcap":                alert.get("mcap", "Unknown"),
+            "vol_ratio":           alert.get("vol_ratio", 0),
+            "recent_vol_usdt":     alert.get("recent_vol_usdt", 0),
+            "baseline_vol_usdt":   alert.get("baseline_vol_usdt", 0),
+            "recent_vol_fmt":      alert.get("recent_vol_fmt", "N/A"),
+            "baseline_vol_fmt":    alert.get("baseline_vol_fmt", "N/A"),
+            "candle_color":        alert.get("candle_color", "N/A"),
+            "body_pct":            alert.get("body_pct", 0),
+            "upper_wick_pct":      alert.get("upper_wick_pct", 0),
+            "lower_wick_pct":      alert.get("lower_wick_pct", 0),
+            "breakout_confirmed":  alert.get("breakout_confirmed"),
+            "breakout_level":      alert.get("breakout_level"),
             "breakout_margin_pct": alert.get("breakout_margin_pct"),
-
-            # open interest
-            "oi_pct":            alert.get("oi_pct"),
-
-            # trend context
-            "trend_green":       alert.get("trend_green", 0),
-            "trend_total":       alert.get("trend_total", 0),
-            "trend_pattern":     alert.get("trend_pattern", ""),
-
-            # market context
-            "btc_price":         alert.get("btc_price"),
+            "oi_pct":              alert.get("oi_pct"),
+            "trend_green":         alert.get("trend_green", 0),
+            "trend_total":         alert.get("trend_total", 0),
+            "trend_pattern":       alert.get("trend_pattern", ""),
+            "btc_price":           alert.get("btc_price"),
+            # take-profit tracking
+            "tp_sent":             [],
+            "reversal_warned":     False,
         }
 
         with self._lock:
@@ -147,7 +166,98 @@ class SignalTracker:
         except Exception as exc:
             logger.warning("Tracker price update failed: %s", exc)
 
-    # ── archive expired signals ──────────────────────────────────────
+    # ── take-profit checking ─────────────────────────────────────────
+
+    def _check_take_profits(self) -> None:
+        """Check all active signals for TP targets and reversal conditions."""
+        with self._lock:
+            signals = self._load(self._signals_file)
+            if not signals:
+                return
+
+            changed = False
+            alerts_to_send: list[dict] = []
+
+            for sig in signals:
+                entry = sig.get("entry_price", 0)
+                if entry <= 0:
+                    continue
+
+                highest = sig.get("highest_price", entry)
+                current = sig.get("current_price", entry)
+                high_pct = ((highest - entry) / entry) * 100
+                cur_pct = ((current - entry) / entry) * 100
+                age_str = self._fmt_age(sig["alert_time_ts"])
+
+                # ensure tp_sent exists (backwards compat)
+                tp_sent: list = sig.get("tp_sent", [])
+
+                # ── check each TP target ─────────────────────────────
+                for target in self._tp_targets:
+                    if target in tp_sent:
+                        continue
+                    if high_pct >= target:
+                        tp_sent.append(target)
+                        changed = True
+                        alerts_to_send.append({
+                            "type":          "take_profit",
+                            "symbol":        sig["symbol"],
+                            "target":        target,
+                            "entry_price":   entry,
+                            "current_price": current,
+                            "highest_price": highest,
+                            "cur_pct":       cur_pct,
+                            "high_pct":      high_pct,
+                            "age_str":       age_str,
+                        })
+                        logger.info(
+                            "🎯 TP target +%d%% hit for %s (peak: +%.2f%%, now: %+.2f%%)",
+                            target, sig["symbol"], high_pct, cur_pct,
+                        )
+
+                sig["tp_sent"] = tp_sent
+
+                # ── check reversal warning ───────────────────────────
+                if (
+                    self._reversal_enabled
+                    and not sig.get("reversal_warned", False)
+                    and high_pct >= self._min_reversal_peak
+                ):
+                    drop_from_peak = high_pct - cur_pct
+                    if drop_from_peak >= self._reversal_drop:
+                        sig["reversal_warned"] = True
+                        changed = True
+                        alerts_to_send.append({
+                            "type":          "reversal",
+                            "symbol":        sig["symbol"],
+                            "entry_price":   entry,
+                            "current_price": current,
+                            "highest_price": highest,
+                            "cur_pct":       cur_pct,
+                            "high_pct":      high_pct,
+                            "drop_pct":      drop_from_peak,
+                            "age_str":       age_str,
+                        })
+                        logger.info(
+                            "⚠️ Reversal warning for %s (peak: +%.2f%%, now: %+.2f%%, drop: %.2f%%)",
+                            sig["symbol"], high_pct, cur_pct, drop_from_peak,
+                        )
+
+            if changed:
+                self._save(self._signals_file, signals)
+
+        # send alerts outside the lock
+        for alert in alerts_to_send:
+            try:
+                if alert["type"] == "take_profit":
+                    self._notifier.send_take_profit(alert)
+                elif alert["type"] == "reversal":
+                    self._notifier.send_reversal_warning(alert)
+                time.sleep(0.5)
+            except Exception as exc:
+                logger.error("Failed to send %s alert: %s", alert["type"], exc)
+
+    # ── archive expired ──────────────────────────────────────────────
 
     def archive_expired(self) -> int:
         now = time.time()
@@ -208,6 +318,7 @@ class SignalTracker:
         while self._running:
             try:
                 self.fetch_and_apply()
+                self._check_take_profits()
                 archived = self.archive_expired()
                 if archived:
                     logger.info("Tracker: archived %d expired signals", archived)

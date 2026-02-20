@@ -5,10 +5,10 @@ Analysis flow per symbol:
   1. Cooldown check
   2. Volume spike detection
   3. Candle quality filters (bullish, wick, body)
-  4. Breakout confirmation (optional)
-  5. Open interest surge (optional)
-  6. Trend context + enrichment
-  7. Alert + track
+  4. Trend strength filter
+  5. Breakout confirmation + margin limits (optional)
+  6. Open interest surge (optional)
+  7. Enrichment + alert + track
 """
 
 from __future__ import annotations
@@ -62,6 +62,7 @@ class Scanner:
         self,
         config: dict,
         binance: BinanceClient,
+        notifier: TelegramNotifier,
         tracker: Optional[SignalTracker] = None,
     ) -> None:
         sc = config["scanner"]
@@ -77,17 +78,22 @@ class Scanner:
         # breakout
         self.brk_on:          bool  = sc["breakout_enabled"]
         self.brk_lookback:    int   = sc["breakout_lookback"]
+        self.min_brk_margin:  float = sc.get("min_breakout_margin_pct", 0)
+        self.max_brk_margin:  float = sc.get("max_breakout_margin_pct", 0)
 
         # open interest
         self.oi_on:           bool  = sc["open_interest_enabled"]
         self.oi_periods:      int   = sc["open_interest_periods"]
         self.oi_min_pct:      float = sc["open_interest_min_increase_pct"]
 
-        # candle quality filters
+        # candle quality
         self.bullish_required: bool  = sc.get("bullish_candle_required", True)
         self.max_wick_pct:     float = sc.get("max_upper_wick_pct", 0)
         self.min_body_pct:     float = sc.get("min_body_pct", 0)
+
+        # trend
         self.trend_count:      int   = sc.get("trend_candles", 5)
+        self.min_trend_pct:    float = sc.get("min_trend_green_pct", 0)
 
         self.excluded:        set   = set(sc.get("excluded_symbols", []))
         self.cooldown_hours:  float = sc.get("cooldown_hours", 12)
@@ -99,14 +105,11 @@ class Scanner:
 
         # components
         self._binance = binance
+        self._tg = notifier
         rl = config.get("rate_limit", {})
         self._mcap = MarketCapProvider(
             cache_minutes=rl.get("market_cap_cache_minutes", 120),
             include_unknown=sc.get("include_unknown_market_cap", True),
-        )
-        self._tg = TelegramNotifier(
-            bot_token=config["telegram"]["bot_token"],
-            chat_id=config["telegram"]["chat_id"],
         )
         self._cooldown = _CooldownTracker(
             cooldown_seconds=self.cooldown_hours * 3600,
@@ -115,32 +118,19 @@ class Scanner:
         self._mark_prices: Dict[str, float] = {}
         self._running = False
 
-    # ── candle analysis helpers ──────────────────────────────────────
+    # ── helpers ──────────────────────────────────────────────────────
 
     @staticmethod
     def _candle_metrics(candle: dict) -> dict:
-        """Compute candle shape metrics."""
-        o = candle["open"]
-        h = candle["high"]
-        l = candle["low"]
-        c = candle["close"]
+        o, h, l, c = candle["open"], candle["high"], candle["low"], candle["close"]
         rng = h - l
-
         if rng <= 0:
-            return {
-                "color": "DOJI",
-                "body_pct": 0.0,
-                "upper_wick_pct": 0.0,
-                "lower_wick_pct": 0.0,
-            }
-
-        is_green = c >= o
+            return {"color": "DOJI", "body_pct": 0.0, "upper_wick_pct": 0.0, "lower_wick_pct": 0.0}
         body = abs(c - o)
         upper_wick = h - max(c, o)
         lower_wick = min(c, o) - l
-
         return {
-            "color": "GREEN" if is_green else "RED",
+            "color": "GREEN" if c >= o else "RED",
             "body_pct": round((body / rng) * 100, 1),
             "upper_wick_pct": round((upper_wick / rng) * 100, 1),
             "lower_wick_pct": round((lower_wick / rng) * 100, 1),
@@ -148,7 +138,6 @@ class Scanner:
 
     @staticmethod
     def _trend_strength(candles: List[dict], count: int) -> dict:
-        """Analyse recent trend direction."""
         recent = candles[-count:] if len(candles) >= count else candles
         pattern = ""
         greens = 0
@@ -158,11 +147,7 @@ class Scanner:
                 greens += 1
             else:
                 pattern += "R"
-        return {
-            "green_count": greens,
-            "total": len(recent),
-            "pattern": pattern,
-        }
+        return {"green_count": greens, "total": len(recent), "pattern": pattern}
 
     @staticmethod
     def _fmt_vol_usd(vol: float) -> str:
@@ -180,9 +165,6 @@ class Scanner:
         self._running = False
 
     def run(self) -> None:
-        if not self._tg.validate():
-            logger.error("Telegram validation failed — aborting.")
-            return
         self._send_startup()
         self._running = True
         logger.info(
@@ -204,7 +186,7 @@ class Scanner:
         while self._running and time.time() < end:
             time.sleep(min(1.0, end - time.time()))
 
-    # ── one full scan cycle ──────────────────────────────────────────
+    # ── scan cycle ───────────────────────────────────────────────────
 
     def _cycle(self) -> None:
         all_syms = self._binance.get_usdt_perpetual_symbols()
@@ -271,26 +253,22 @@ class Scanner:
 
         if avg_b <= 0:
             return None
-
         ratio = avg_r / avg_b
         if ratio < self.vol_mult:
             return None
 
         logger.info("%s  volume spike %.2fx", symbol, ratio)
 
-        # ── 2. candle quality checks ─────────────────────────────────
+        # ── 2. candle quality ────────────────────────────────────────
         metrics = self._candle_metrics(last)
 
         if self.bullish_required and metrics["color"] != "GREEN":
-            logger.debug(
-                "%s  rejected — RED candle (bullish_candle_required=true)",
-                symbol,
-            )
+            logger.debug("%s  rejected — RED candle", symbol)
             return None
 
         if self.max_wick_pct > 0 and metrics["upper_wick_pct"] > self.max_wick_pct:
             logger.debug(
-                "%s  rejected — upper wick %.1f%% > max %.1f%%",
+                "%s  rejected — wick %.1f%% > max %.1f%%",
                 symbol, metrics["upper_wick_pct"], self.max_wick_pct,
             )
             return None
@@ -302,12 +280,25 @@ class Scanner:
             )
             return None
 
+        # ── 3. trend strength ────────────────────────────────────────
+        trend = self._trend_strength(candles, self.trend_count)
+
+        if self.min_trend_pct > 0 and trend["total"] > 0:
+            green_pct = (trend["green_count"] / trend["total"]) * 100
+            if green_pct < self.min_trend_pct:
+                logger.debug(
+                    "%s  rejected — trend %.0f%% green < min %.0f%%",
+                    symbol, green_pct, self.min_trend_pct,
+                )
+                return None
+
         logger.info(
-            "%s  candle OK — %s body:%.0f%% wick:%.0f%%",
-            symbol, metrics["color"], metrics["body_pct"], metrics["upper_wick_pct"],
+            "%s  candle OK — %s body:%.0f%% wick:%.0f%% trend:%d/%d",
+            symbol, metrics["color"], metrics["body_pct"],
+            metrics["upper_wick_pct"], trend["green_count"], trend["total"],
         )
 
-        # ── 3. breakout check (optional) ─────────────────────────────
+        # ── 4. breakout check (optional) ─────────────────────────────
         brk_ok: Optional[bool] = None
         brk_level: Optional[float] = None
         brk_margin: Optional[float] = None
@@ -319,18 +310,33 @@ class Scanner:
             brk_level = max(c["high"] for c in lookback)
             brk_ok = last["close"] > brk_level
             if not brk_ok:
+                logger.debug("%s  breakout NOT confirmed", symbol)
+                return None
+
+            brk_margin = ((last["close"] - brk_level) / brk_level) * 100
+
+            # too small breakout — barely broke out
+            if self.min_brk_margin > 0 and brk_margin < self.min_brk_margin:
                 logger.debug(
-                    "%s  breakout NOT confirmed (close %.6f ≤ high %.6f)",
-                    symbol, last["close"], brk_level,
+                    "%s  rejected — breakout margin %.2f%% < min %.2f%%",
+                    symbol, brk_margin, self.min_brk_margin,
                 )
                 return None
-            brk_margin = ((last["close"] - brk_level) / brk_level) * 100
+
+            # too big breakout — buying the top
+            if self.max_brk_margin > 0 and brk_margin > self.max_brk_margin:
+                logger.debug(
+                    "%s  rejected — breakout margin %.2f%% > max %.2f%% (buying the top)",
+                    symbol, brk_margin, self.max_brk_margin,
+                )
+                return None
+
             logger.info(
                 "%s  breakout confirmed +%.2f%% above %.6f",
                 symbol, brk_margin, brk_level,
             )
 
-        # ── 4. open-interest check (optional) ────────────────────────
+        # ── 5. open-interest check (optional) ────────────────────────
         oi_pct: Optional[float] = None
         if self.oi_on:
             oi_pct = self._oi_change(symbol)
@@ -345,65 +351,50 @@ class Scanner:
                 return None
             logger.info("%s  OI +%.2f%%", symbol, oi_pct)
 
-        # ── 5. all passed — enrich + build alert ─────────────────────
+        # ── 6. all passed — build alert ──────────────────────────────
         self._cooldown.record(symbol)
 
-        trend = self._trend_strength(candles, self.trend_count)
         price = self._mark_prices.get(symbol)
         btc_price = self._mark_prices.get("BTCUSDT")
         candle_dt = datetime.fromtimestamp(last["open_time"] / 1000, tz=timezone.utc)
         now_dt = datetime.now(timezone.utc)
 
         alert = {
-            # identity
-            "symbol":             symbol,
-            "timeframe":          self.timeframe,
-            "mcap":               self._mcap.format(base),
-            "price":              f"{price:.8f}" if price else "N/A",
-
-            # volume
-            "vol_ratio":          ratio,
-            "vol_threshold":      self.vol_mult,
-            "recent_vol_usdt":    avg_r,
-            "baseline_vol_usdt":  avg_b,
-            "recent_vol_fmt":     self._fmt_vol_usd(avg_r),
-            "baseline_vol_fmt":   self._fmt_vol_usd(avg_b),
-
-            # candle quality
-            "candle_color":       metrics["color"],
-            "body_pct":           metrics["body_pct"],
-            "upper_wick_pct":     metrics["upper_wick_pct"],
-            "lower_wick_pct":     metrics["lower_wick_pct"],
-
-            # breakout
-            "breakout_enabled":   self.brk_on,
-            "breakout_confirmed": brk_ok,
-            "breakout_level":     brk_level,
+            "symbol":              symbol,
+            "timeframe":           self.timeframe,
+            "mcap":                self._mcap.format(base),
+            "price":               f"{price:.8f}" if price else "N/A",
+            "vol_ratio":           ratio,
+            "vol_threshold":       self.vol_mult,
+            "recent_vol_usdt":     avg_r,
+            "baseline_vol_usdt":   avg_b,
+            "recent_vol_fmt":      self._fmt_vol_usd(avg_r),
+            "baseline_vol_fmt":    self._fmt_vol_usd(avg_b),
+            "candle_color":        metrics["color"],
+            "body_pct":            metrics["body_pct"],
+            "upper_wick_pct":      metrics["upper_wick_pct"],
+            "lower_wick_pct":      metrics["lower_wick_pct"],
+            "breakout_enabled":    self.brk_on,
+            "breakout_confirmed":  brk_ok,
+            "breakout_level":      brk_level,
             "breakout_margin_pct": brk_margin,
-
-            # open interest
-            "oi_enabled":         self.oi_on,
-            "oi_pct":             oi_pct,
-
-            # trend context
-            "trend_green":        trend["green_count"],
-            "trend_total":        trend["total"],
-            "trend_pattern":      trend["pattern"],
-
-            # market context
-            "btc_price":          btc_price,
-
-            # timestamps
-            "candle_time":        candle_dt.strftime("%Y-%m-%d %H:%M UTC"),
-            "alert_time":         now_dt.strftime("%Y-%m-%d %H:%M:%S UTC"),
-            "cooldown_hours":     self.cooldown_hours,
+            "oi_enabled":          self.oi_on,
+            "oi_pct":              oi_pct,
+            "trend_green":         trend["green_count"],
+            "trend_total":         trend["total"],
+            "trend_pattern":       trend["pattern"],
+            "btc_price":           btc_price,
+            "candle_time":         candle_dt.strftime("%Y-%m-%d %H:%M UTC"),
+            "alert_time":          now_dt.strftime("%Y-%m-%d %H:%M:%S UTC"),
+            "cooldown_hours":      self.cooldown_hours,
         }
 
         if self._tracker:
             self._tracker.record_signal(alert)
 
         logger.info(
-            "🚨  ALERT  %s  vol=%.2fx  %s  body:%.0f%%  wick:%.0f%%  brk:%s  oi:%s  trend:%d/%d",
+            "🚨  ALERT  %s  vol=%.2fx  %s  body:%.0f%%  wick:%.0f%%  "
+            "brk:%s  oi:%s  trend:%d/%d",
             symbol, ratio, metrics["color"], metrics["body_pct"],
             metrics["upper_wick_pct"], brk_margin, oi_pct,
             trend["green_count"], trend["total"],
@@ -440,26 +431,23 @@ class Scanner:
         lines = [
             "⚙️ <b>Configuration</b>",
             f"• Timeframe: {self.timeframe}",
-            f"• Market-cap filter: ≤ ${self.mcap_max / 1e6:.0f}M",
+            f"• Market-cap: ≤ ${self.mcap_max / 1e6:.0f}M",
             f"• Volume: last {self.vol_recent} vs prev {self.vol_baseline} (≥{self.vol_mult}x)",
+            f"• Candle: bullish={'ON' if self.bullish_required else 'OFF'}"
+            f"  body≥{self.min_body_pct}%  wick≤{self.max_wick_pct}%",
+            f"• Trend: ≥{self.min_trend_pct:.0f}% green ({self.trend_count} candles)",
         ]
-        if self.bullish_required:
-            lines.append("• Bullish candle: <b>ON</b>")
-        if self.max_wick_pct > 0:
-            lines.append(f"• Max upper wick: <b>{self.max_wick_pct}%</b>")
-        if self.min_body_pct > 0:
-            lines.append(f"• Min body size: <b>{self.min_body_pct}%</b>")
         if self.brk_on:
-            lines.append(f"• Breakout: <b>ON</b>  (lookback {self.brk_lookback})")
+            lines.append(
+                f"• Breakout: <b>ON</b>  lookback:{self.brk_lookback}"
+                f"  margin:{self.min_brk_margin}-{self.max_brk_margin}%"
+            )
         else:
             lines.append("• Breakout: <b>OFF</b>")
         if self.oi_on:
-            lines.append(
-                f"• OI filter: <b>ON</b>  (≥{self.oi_min_pct}%, periods {self.oi_periods})"
-            )
+            lines.append(f"• OI: <b>ON</b>  ≥{self.oi_min_pct}%  periods:{self.oi_periods}")
         else:
-            lines.append("• OI filter: <b>OFF</b>")
-        lines.append(f"• Cooldown: <b>{self.cooldown_hours}h</b> per symbol")
-        lines.append(f"• Tracker: <b>{'ON' if self._tracker else 'OFF'}</b>")
+            lines.append("• OI: <b>OFF</b>")
+        lines.append(f"• Cooldown: {self.cooldown_hours}h  |  Tracker: {'ON' if self._tracker else 'OFF'}")
         lines.append(f"• Scan interval: {self.interval}s")
         self._tg.send_startup("\n".join(lines))

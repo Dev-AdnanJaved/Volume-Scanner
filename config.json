@@ -14,15 +14,23 @@
     "volume_recent_candles": 2,
     "volume_baseline_candles": 15,
     "volume_multiplier": 3.0,
+
     "breakout_enabled": true,
     "breakout_lookback": 20,
+    "min_breakout_margin_pct": 0.5,
+    "max_breakout_margin_pct": 5.0,
+
     "open_interest_enabled": true,
     "open_interest_periods": 15,
     "open_interest_min_increase_pct": 5.0,
+
     "bullish_candle_required": true,
-    "max_upper_wick_pct": 50,
+    "max_upper_wick_pct": 40,
     "min_body_pct": 30,
+
+    "min_trend_green_pct": 60,
     "trend_candles": 5,
+
     "include_unknown_market_cap": true,
     "cooldown_hours": 12,
     "excluded_symbols": ["USDCUSDT", "BTCDOMUSDT"]
@@ -31,7 +39,12 @@
     "enabled": true,
     "max_age_hours": 72,
     "price_update_interval_seconds": 300,
-    "data_dir": "data"
+    "data_dir": "data",
+
+    "take_profit_targets": [3, 5, 10, 15, 20],
+    "reversal_alert_enabled": true,
+    "min_reversal_peak_pct": 3.0,
+    "reversal_drop_from_peak_pct": 5.0
   },
   "rate_limit": {
     "binance_delay_ms": 100,

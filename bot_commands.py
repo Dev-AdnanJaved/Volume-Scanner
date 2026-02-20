@@ -576,7 +576,10 @@ class TelegramCommandListener:
             "/active — Quick signal list\n"
             "/help — This message\n\n"
             f"📡 Tracking window: {self._tracker.max_age_hours}h\n"
-            "🏔 Prices update every 5 min"
+            "🏔 Prices update every 5 min\n"
+            "🎯 Auto TP alerts at configured targets\n"
+            "⚠️ Auto reversal warnings\n"
+            "🔍 /report SYMBOL for diagnosis"
         )
         self._send(chat_id, text)
         
