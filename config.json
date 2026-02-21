@@ -11,7 +11,7 @@
     "timeframe": "1h",
     "scan_interval_seconds": 900,
     "market_cap_max_usd": 500000000,
-    "volume_recent_candles": 2,
+    "volume_recent_candles": 1,
     "volume_baseline_candles": 15,
     "volume_multiplier": 3.0,
 
