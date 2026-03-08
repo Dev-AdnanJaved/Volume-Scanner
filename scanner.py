@@ -235,6 +235,7 @@ class Scanner:
         for idx, sym in enumerate(targets, 1):
             if not self._running:
                 return
+            logger.info("Scanning [%d/%d] %s", idx, len(targets), sym["symbol"])
             try:
                 data = self._analyse(sym)
                 if data:
@@ -243,8 +244,6 @@ class Scanner:
                     time.sleep(0.3)
             except Exception:
                 logger.error("Error analysing %s", sym["symbol"], exc_info=True)
-            if idx % 50 == 0:
-                logger.debug("Progress %d / %d", idx, len(targets))
 
         self._cooldown.prune()
         if alerts:
