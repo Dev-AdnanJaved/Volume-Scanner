@@ -9,6 +9,7 @@ Binance USDT-M Futures REST API client.
 from __future__ import annotations
 
 import logging
+import os
 import time
 from collections import deque
 from threading import Lock
@@ -45,6 +46,11 @@ class BinanceClient:
         self._session.headers["User-Agent"] = "BinanceFuturesScanner/1.0"
         if api_key:
             self._session.headers["X-MBX-APIKEY"] = api_key
+
+        proxy_url = os.environ.get("PROXY_URL", "").strip()
+        if proxy_url:
+            self._session.proxies = {"http": proxy_url, "https": proxy_url}
+            logger.info("Proxy configured: %s", proxy_url)
 
         # weight-based rate-limit bookkeeping
         self._weights: deque[tuple[float, int]] = deque()   # (timestamp, weight)
