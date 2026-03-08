@@ -98,10 +98,17 @@ class Scanner:
         self.excluded:        set   = set(sc.get("excluded_symbols", []))
         self.cooldown_hours:  float = sc.get("cooldown_hours", 12)
 
+        # new strategy filters
+        self.rvol_threshold:      float = sc.get("rvol_threshold", 0)
+        self.min_vol_usdt:        float = sc.get("min_volume_usdt", 0)
+        self.consec_vol_candles:  int   = sc.get("consecutive_volume_candles", 0)
+        self.max_price_chg_24h:   float = sc.get("max_price_change_24h_pct", 0)
+        self.weekly_vol_mult:     float = sc.get("weekly_volume_multiplier", 0)
+
         # candles needed
         vol_need = self.vol_recent + self.vol_baseline
         brk_need = (self.brk_lookback + 1) if self.brk_on else 0
-        self._candles_needed = max(vol_need, brk_need, self.trend_count)
+        self._candles_needed = max(vol_need, brk_need, self.trend_count, self.consec_vol_candles)
 
         # components
         self._binance = binance
@@ -116,6 +123,7 @@ class Scanner:
         )
         self._tracker = tracker
         self._mark_prices: Dict[str, float] = {}
+        self._tickers: Dict[str, dict] = {}
         self._running = False
 
     # ── helpers ──────────────────────────────────────────────────────
@@ -195,6 +203,11 @@ class Scanner:
         except Exception as exc:
             logger.warning("Mark-price fetch failed: %s", exc)
             self._mark_prices = {}
+        try:
+            self._tickers = self._binance.get_24h_tickers()
+        except Exception as exc:
+            logger.warning("24h ticker fetch failed: %s", exc)
+            self._tickers = {}
 
         targets = [
             s for s in all_syms
@@ -257,7 +270,44 @@ class Scanner:
         if ratio < self.vol_mult:
             return None
 
-        logger.info("%s  volume spike %.2fx", symbol, ratio)
+        # ── 1a. minimum absolute volume (avoid illiquid coins) ────────
+        if self.min_vol_usdt > 0 and avg_r < self.min_vol_usdt:
+            logger.debug(
+                "%s  rejected — vol %s < min %s",
+                symbol, self._fmt_vol_usd(avg_r), self._fmt_vol_usd(self.min_vol_usdt),
+            )
+            return None
+
+        # ── 1b. RVOL threshold (bonus powerful filter) ────────────────
+        if self.rvol_threshold > 0 and ratio < self.rvol_threshold:
+            logger.debug(
+                "%s  rejected — RVOL %.2fx < threshold %.2fx", symbol, ratio, self.rvol_threshold,
+            )
+            return None
+
+        # ── 1c. consecutive volume growth (accumulation pattern) ──────
+        if self.consec_vol_candles > 1:
+            consec = candles[-self.consec_vol_candles:]
+            if len(consec) >= self.consec_vol_candles:
+                is_increasing = all(
+                    consec[i]["quote_volume"] > consec[i - 1]["quote_volume"]
+                    for i in range(1, len(consec))
+                )
+                if not is_increasing:
+                    logger.debug("%s  rejected — volume not consecutively increasing", symbol)
+                    return None
+
+        # ── 1d. 24h price change cap (avoid late entries) ─────────────
+        ticker = self._tickers.get(symbol, {})
+        price_chg_24h = ticker.get("price_change_pct", 0)
+        if self.max_price_chg_24h > 0 and abs(price_chg_24h) > self.max_price_chg_24h:
+            logger.debug(
+                "%s  rejected — 24h price change %.1f%% > max %.1f%%",
+                symbol, price_chg_24h, self.max_price_chg_24h,
+            )
+            return None
+
+        logger.info("%s  volume spike %.2fx (RVOL)  24h chg: %.1f%%", symbol, ratio, price_chg_24h)
 
         # ── 2. candle quality ────────────────────────────────────────
         metrics = self._candle_metrics(last)
@@ -351,7 +401,24 @@ class Scanner:
                 return None
             logger.info("%s  OI +%.2f%%", symbol, oi_pct)
 
-        # ── 6. all passed — build alert ──────────────────────────────
+        # ── 6. weekly liquidity expansion check ──────────────────────
+        weekly_rvol: Optional[float] = None
+        if self.weekly_vol_mult > 0:
+            daily = self._binance.get_closed_klines(symbol, "1d", 7)
+            if len(daily) >= 7:
+                weekly_avg = sum(c["quote_volume"] for c in daily) / len(daily)
+                vol_24h = ticker.get("quote_volume_24h", 0)
+                if weekly_avg > 0:
+                    weekly_rvol = vol_24h / weekly_avg
+                    if weekly_rvol < self.weekly_vol_mult:
+                        logger.debug(
+                            "%s  rejected — 24h vol %.1fx weekly avg (need %.1fx)",
+                            symbol, weekly_rvol, self.weekly_vol_mult,
+                        )
+                        return None
+                    logger.info("%s  weekly liquidity expansion %.1fx", symbol, weekly_rvol)
+
+        # ── 7. all passed — build alert ──────────────────────────────
         self._cooldown.record(symbol)
 
         price = self._mark_prices.get(symbol)
@@ -370,6 +437,8 @@ class Scanner:
             "baseline_vol_usdt":   avg_b,
             "recent_vol_fmt":      self._fmt_vol_usd(avg_r),
             "baseline_vol_fmt":    self._fmt_vol_usd(avg_b),
+            "price_change_24h":    price_chg_24h,
+            "weekly_rvol":         weekly_rvol,
             "candle_color":        metrics["color"],
             "body_pct":            metrics["body_pct"],
             "upper_wick_pct":      metrics["upper_wick_pct"],
@@ -432,7 +501,12 @@ class Scanner:
             "⚙️ <b>Configuration</b>",
             f"• Timeframe: {self.timeframe}",
             f"• Market-cap: ≤ ${self.mcap_max / 1e6:.0f}M",
-            f"• Volume: last {self.vol_recent} vs prev {self.vol_baseline} (≥{self.vol_mult}x)",
+            f"• Volume: last {self.vol_recent} vs prev {self.vol_baseline} (≥{self.vol_mult}x RVOL"
+            + (f", bonus≥{self.rvol_threshold}x" if self.rvol_threshold > 0 else "") + ")",
+            f"• Min volume: {self._fmt_vol_usd(self.min_vol_usdt) if self.min_vol_usdt > 0 else 'OFF'}",
+            f"• Consec. vol growth: {self.consec_vol_candles} candles" if self.consec_vol_candles > 1 else "• Consec. vol growth: OFF",
+            f"• 24h price change cap: ≤{self.max_price_chg_24h}%" if self.max_price_chg_24h > 0 else "• 24h price change cap: OFF",
+            f"• Weekly liquidity: ≥{self.weekly_vol_mult}x weekly avg" if self.weekly_vol_mult > 0 else "• Weekly liquidity: OFF",
             f"• Candle: bullish={'ON' if self.bullish_required else 'OFF'}"
             f"  body≥{self.min_body_pct}%  wick≤{self.max_wick_pct}%",
             f"• Trend: ≥{self.min_trend_pct:.0f}% green ({self.trend_count} candles)",

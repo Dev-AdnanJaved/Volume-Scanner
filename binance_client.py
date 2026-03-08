@@ -176,6 +176,17 @@ class BinanceClient:
             )
         return closed[-count:]                # trim to exactly what was asked
 
+    def get_24h_tickers(self) -> Dict[str, dict]:
+        """Fetch 24h ticker stats for all USDT futures symbols in one call."""
+        data = self._get("/fapi/v1/ticker/24hr", weight=40)
+        result = {}
+        for d in data:
+            result[d["symbol"]] = {
+                "price_change_pct": float(d.get("priceChangePercent", 0)),
+                "quote_volume_24h": float(d.get("quoteVolume", 0)),
+            }
+        return result
+
     def get_oi_history(self, symbol: str, period: str, limit: int) -> List[Dict]:
         """
         Historical open interest (from /futures/data/ endpoint).
