@@ -16,7 +16,7 @@
     "volume_multiplier": 3.0,
 
     "breakout_enabled": true,
-    "breakout_lookback": 20,
+    "breakout_lookback": 15,
     "min_breakout_margin_pct": 0.5,
     "max_breakout_margin_pct": 5.0,
 
@@ -37,11 +37,11 @@
   },
   "tracker": {
     "enabled": true,
-    "max_age_hours": 72,
+    "max_age_hours": 168,
     "price_update_interval_seconds": 300,
     "data_dir": "data",
 
-    "take_profit_targets": [3, 5, 10, 15, 20],
+    "take_profit_targets": [5, 10, 15, 20],
     "reversal_alert_enabled": true,
     "min_reversal_peak_pct": 3.0,
     "reversal_drop_from_peak_pct": 5.0

@@ -100,3 +100,6 @@
 2026-03-08 19:03:09 [INFO] scanner: Scanner loop started  (interval 900s, need 21 candles/symbol, cooldown 12.0h)
 2026-03-08 19:03:09 [INFO] binance_client: Loaded 544 USDT perpetual symbols from exchange info
 2026-03-08 19:03:10 [INFO] market_cap: Refreshing market-cap cache from CoinGecko …
+2026-03-08 19:06:54 [INFO] market_cap: Market-cap cache updated: 2822 coins loaded (12 pages in ~240s)
+2026-03-08 19:06:54 [INFO] scanner: Targets: 488 / 544  (mcap ≤ $500M, 2 excluded, 0 on cooldown)
+2026-03-08 19:07:02 [INFO] scanner: SKLUSDT  volume spike 24.15x
