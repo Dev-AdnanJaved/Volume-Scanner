@@ -265,3 +265,5 @@
 2026-03-08 20:14:21 [INFO] scanner: Scanner loop started  (interval 900s, need 21 candles/symbol, cooldown 12.0h)
 2026-03-08 20:14:23 [INFO] binance_client: Loaded 544 USDT perpetual symbols from exchange info
 2026-03-08 20:14:24 [INFO] market_cap: Refreshing market-cap cache from CoinGecko …
+2026-03-08 20:18:08 [INFO] market_cap: Market-cap cache updated: 2821 coins loaded (12 pages in ~240s)
+2026-03-08 20:18:08 [INFO] scanner: Targets: 503 / 544  (mcap ≤ $1000M, 2 excluded, 0 on cooldown)
