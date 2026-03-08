@@ -14,6 +14,7 @@ import signal
 import sys
 import threading
 import time
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 from binance_client import BinanceClient
@@ -72,6 +73,22 @@ def validate_config(cfg: dict) -> None:
             sys.exit(1)
 
 
+def _start_health_server(port: int = 8080) -> None:
+    class _Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"OK")
+
+        def log_message(self, *args):
+            pass
+
+    server = HTTPServer(("0.0.0.0", port), _Handler)
+    thread = threading.Thread(target=server.serve_forever, name="health", daemon=True)
+    thread.start()
+    logging.getLogger("main").info("Health check server started on port %d", port)
+
+
 def main() -> None:
     config = load_config()
     setup_logging(config)
@@ -81,6 +98,8 @@ def main() -> None:
     logger.info("=" * 60)
     logger.info("  Binance Futures Volume Scanner  —  starting")
     logger.info("=" * 60)
+
+    _start_health_server(port=8080)
 
     # shared binance client
     rl = config.get("rate_limit", {})
