@@ -84,6 +84,13 @@ class BinanceClient:
             time.sleep(self._delay)
             try:
                 resp = self._session.get(url, params=params, timeout=30)
+                if resp.status_code == 451:
+                    logger.error(
+                        "HTTP 451 — Binance is blocking this server's IP (geo/legal restriction). "
+                        "Sleeping 300s before retry."
+                    )
+                    time.sleep(300)
+                    continue
                 if resp.status_code == 429:
                     wait = int(resp.headers.get("Retry-After", 60))
                     logger.warning("429 from Binance — backing off %ds", wait)

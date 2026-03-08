@@ -173,7 +173,10 @@ class Scanner:
         self._running = False
 
     def run(self) -> None:
-        self._send_startup()
+        try:
+            self._send_startup()
+        except Exception as exc:
+            logger.warning("Startup message failed (non-fatal): %s", exc)
         self._running = True
         logger.info(
             "Scanner loop started  (interval %ds, need %d candles/symbol, cooldown %.1fh)",
@@ -184,7 +187,7 @@ class Scanner:
             try:
                 self._cycle()
             except Exception:
-                logger.error("Scan cycle error", exc_info=True)
+                logger.error("Scan cycle error — will retry next interval", exc_info=True)
             elapsed = time.time() - t0
             logger.info("Cycle finished in %.1fs", elapsed)
             self._sleep(max(0.0, self.interval - elapsed))
@@ -197,7 +200,14 @@ class Scanner:
     # ── scan cycle ───────────────────────────────────────────────────
 
     def _cycle(self) -> None:
-        all_syms = self._binance.get_usdt_perpetual_symbols()
+        try:
+            all_syms = self._binance.get_usdt_perpetual_symbols()
+        except Exception as exc:
+            logger.error("Failed to fetch symbol list — skipping cycle: %s", exc)
+            return
+        if not all_syms:
+            logger.warning("Symbol list is empty — skipping cycle")
+            return
         try:
             self._mark_prices = self._binance.get_mark_prices()
         except Exception as exc:
