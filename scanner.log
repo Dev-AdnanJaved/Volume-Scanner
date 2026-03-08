@@ -194,3 +194,31 @@
 2026-03-08 20:00:17 [INFO] scanner: Scanner loop started  (interval 900s, need 21 candles/symbol, cooldown 12.0h)
 2026-03-08 20:00:17 [INFO] binance_client: Loaded 544 USDT perpetual symbols from exchange info
 2026-03-08 20:00:18 [INFO] market_cap: Refreshing market-cap cache from CoinGecko …
+2026-03-08 20:03:49 [INFO] main: Received signal 15 — shutting down …
+2026-03-08 20:03:50 [INFO] main: Received signal 15 — shutting down …
+2026-03-08 20:03:52 [INFO] main: ============================================================
+2026-03-08 20:03:52 [INFO] main:   Binance Futures Volume Scanner  —  starting
+2026-03-08 20:03:52 [INFO] main: ============================================================
+2026-03-08 20:03:52 [INFO] binance_client: Proxy configured: http://ombqfuwr:k6mr1wnkkbcs@194.39.32.164:6461
+2026-03-08 20:03:53 [INFO] notifier: Telegram bot validated: @BinanceCoinsVolumeScanner_Bot
+2026-03-08 20:03:53 [INFO] tracker: Tracker initialised  (max_age=168h, update=300s, TP targets=[5, 10, 15, 20], reversal=True)
+2026-03-08 20:03:53 [INFO] tracker: Tracker background loop started (every 300s)
+2026-03-08 20:03:53 [INFO] bot_commands: Telegram command listener started
+2026-03-08 20:03:53 [INFO] main: Tracker + command listener started
+2026-03-08 20:03:53 [INFO] scanner: Scanner loop started  (interval 900s, need 21 candles/symbol, cooldown 12.0h)
+2026-03-08 20:03:53 [INFO] main: ============================================================
+2026-03-08 20:03:53 [INFO] main:   Binance Futures Volume Scanner  —  starting
+2026-03-08 20:03:53 [INFO] main: ============================================================
+2026-03-08 20:03:53 [INFO] binance_client: Proxy configured: http://ombqfuwr:k6mr1wnkkbcs@194.39.32.164:6461
+2026-03-08 20:03:54 [INFO] notifier: Telegram bot validated: @BinanceCoinsVolumeScanner_Bot
+2026-03-08 20:03:54 [INFO] tracker: Tracker initialised  (max_age=168h, update=300s, TP targets=[5, 10, 15, 20], reversal=True)
+2026-03-08 20:03:54 [INFO] tracker: Tracker background loop started (every 300s)
+2026-03-08 20:03:54 [INFO] bot_commands: Telegram command listener started
+2026-03-08 20:03:54 [INFO] main: Tracker + command listener started
+2026-03-08 20:03:54 [INFO] scanner: Scanner loop started  (interval 900s, need 21 candles/symbol, cooldown 12.0h)
+2026-03-08 20:03:55 [INFO] binance_client: Loaded 544 USDT perpetual symbols from exchange info
+2026-03-08 20:03:56 [INFO] binance_client: Loaded 544 USDT perpetual symbols from exchange info
+2026-03-08 20:03:57 [INFO] market_cap: Refreshing market-cap cache from CoinGecko …
+2026-03-08 20:03:57 [WARNING] market_cap: CoinGecko 429 on page 1 — waiting 90s (attempt 1/3)
+2026-03-08 20:03:58 [INFO] market_cap: Refreshing market-cap cache from CoinGecko …
+2026-03-08 20:03:58 [WARNING] market_cap: CoinGecko 429 on page 1 — waiting 89s (attempt 1/3)
