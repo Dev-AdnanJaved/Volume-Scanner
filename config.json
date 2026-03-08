@@ -10,10 +10,15 @@
   "scanner": {
     "timeframe": "1h",
     "scan_interval_seconds": 900,
-    "market_cap_max_usd": 500000000,
+    "market_cap_max_usd": 1000000000,
     "volume_recent_candles": 1,
-    "volume_baseline_candles": 15,
+    "volume_baseline_candles": 20,
     "volume_multiplier": 3.0,
+    "rvol_threshold": 4.0,
+    "min_volume_usdt": 1000000,
+    "consecutive_volume_candles": 3,
+    "max_price_change_24h_pct": 20.0,
+    "weekly_volume_multiplier": 5.0,
 
     "breakout_enabled": true,
     "breakout_lookback": 15,
@@ -26,7 +31,7 @@
 
     "bullish_candle_required": true,
     "max_upper_wick_pct": 40,
-    "min_body_pct": 30,
+    "min_body_pct": 50,
 
     "min_trend_green_pct": 60,
     "trend_candles": 5,
