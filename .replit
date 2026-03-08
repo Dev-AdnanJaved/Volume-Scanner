@@ -29,8 +29,8 @@ args = "python main.py"
 outputType = "console"
 
 [deployment]
-deploymentTarget = "autoscale"
-run = ["python", "main.py"]
+deploymentTarget = "cloudrun"
+run = ["sh", "-c", "python main.py"]
 
 [[ports]]
 localPort = 8080
