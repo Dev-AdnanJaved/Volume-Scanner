@@ -9,6 +9,7 @@ Starts three concurrent components:
 
 import json
 import logging
+import os
 import signal
 import sys
 import threading
@@ -28,7 +29,18 @@ def load_config(path: str = "config.json") -> dict:
         print(f"ERROR  config file not found: {path}")
         sys.exit(1)
     with open(cfg_path, "r", encoding="utf-8") as fh:
-        return json.load(fh)
+        cfg = json.load(fh)
+
+    if os.environ.get("TELEGRAM_BOT_TOKEN"):
+        cfg.setdefault("telegram", {})["bot_token"] = os.environ["TELEGRAM_BOT_TOKEN"]
+    if os.environ.get("TELEGRAM_CHAT_ID"):
+        cfg.setdefault("telegram", {})["chat_id"] = os.environ["TELEGRAM_CHAT_ID"]
+    if os.environ.get("BINANCE_API_KEY"):
+        cfg.setdefault("binance", {})["api_key"] = os.environ["BINANCE_API_KEY"]
+    if os.environ.get("BINANCE_API_SECRET"):
+        cfg.setdefault("binance", {})["api_secret"] = os.environ["BINANCE_API_SECRET"]
+
+    return cfg
 
 
 def setup_logging(config: dict) -> None:
