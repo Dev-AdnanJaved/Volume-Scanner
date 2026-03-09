@@ -18,12 +18,12 @@
     "min_volume_usdt": 1000000,
     "consecutive_volume_candles": 3,
     "max_price_change_24h_pct": 20.0,
-    "weekly_volume_multiplier": 5.0,
+    "weekly_volume_multiplier": 2.5,
 
     "breakout_enabled": true,
     "breakout_lookback": 15,
     "min_breakout_margin_pct": 0.5,
-    "max_breakout_margin_pct": 5.0,
+    "max_breakout_margin_pct": 8.0,
 
     "open_interest_enabled": true,
     "open_interest_periods": 15,

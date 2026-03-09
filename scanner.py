@@ -322,18 +322,18 @@ class Scanner:
         metrics = self._candle_metrics(last)
 
         if self.bullish_required and metrics["color"] != "GREEN":
-            logger.debug("%s  rejected — RED candle", symbol)
+            logger.info("%s  rejected — RED candle", symbol)
             return None
 
         if self.max_wick_pct > 0 and metrics["upper_wick_pct"] > self.max_wick_pct:
-            logger.debug(
+            logger.info(
                 "%s  rejected — wick %.1f%% > max %.1f%%",
                 symbol, metrics["upper_wick_pct"], self.max_wick_pct,
             )
             return None
 
         if self.min_body_pct > 0 and metrics["body_pct"] < self.min_body_pct:
-            logger.debug(
+            logger.info(
                 "%s  rejected — body %.1f%% < min %.1f%%",
                 symbol, metrics["body_pct"], self.min_body_pct,
             )
@@ -345,7 +345,7 @@ class Scanner:
         if self.min_trend_pct > 0 and trend["total"] > 0:
             green_pct = (trend["green_count"] / trend["total"]) * 100
             if green_pct < self.min_trend_pct:
-                logger.debug(
+                logger.info(
                     "%s  rejected — trend %.0f%% green < min %.0f%%",
                     symbol, green_pct, self.min_trend_pct,
                 )
@@ -369,14 +369,14 @@ class Scanner:
             brk_level = max(c["high"] for c in lookback)
             brk_ok = last["close"] > brk_level
             if not brk_ok:
-                logger.debug("%s  breakout NOT confirmed", symbol)
+                logger.info("%s  rejected — breakout NOT confirmed (close below 15-candle high)", symbol)
                 return None
 
             brk_margin = ((last["close"] - brk_level) / brk_level) * 100
 
             # too small breakout — barely broke out
             if self.min_brk_margin > 0 and brk_margin < self.min_brk_margin:
-                logger.debug(
+                logger.info(
                     "%s  rejected — breakout margin %.2f%% < min %.2f%%",
                     symbol, brk_margin, self.min_brk_margin,
                 )
@@ -384,7 +384,7 @@ class Scanner:
 
             # too big breakout — buying the top
             if self.max_brk_margin > 0 and brk_margin > self.max_brk_margin:
-                logger.debug(
+                logger.info(
                     "%s  rejected — breakout margin %.2f%% > max %.2f%% (buying the top)",
                     symbol, brk_margin, self.max_brk_margin,
                 )
@@ -400,11 +400,11 @@ class Scanner:
         if self.oi_on:
             oi_pct = self._oi_change(symbol)
             if oi_pct is None:
-                logger.debug("%s  OI data unavailable — skipping", symbol)
+                logger.info("%s  rejected — OI data unavailable", symbol)
                 return None
             if oi_pct < self.oi_min_pct:
-                logger.debug(
-                    "%s  OI +%.2f%% < threshold %.2f%%",
+                logger.info(
+                    "%s  rejected — OI +%.2f%% < threshold %.2f%%",
                     symbol, oi_pct, self.oi_min_pct,
                 )
                 return None
@@ -420,7 +420,7 @@ class Scanner:
                 if weekly_avg > 0:
                     weekly_rvol = vol_24h / weekly_avg
                     if weekly_rvol < self.weekly_vol_mult:
-                        logger.debug(
+                        logger.info(
                             "%s  rejected — 24h vol %.1fx weekly avg (need %.1fx)",
                             symbol, weekly_rvol, self.weekly_vol_mult,
                         )

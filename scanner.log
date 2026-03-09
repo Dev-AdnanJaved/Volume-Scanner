@@ -1872,3 +1872,364 @@
 2026-03-08 22:28:40 [INFO] scanner: Scanning [502/503] KATUSDT
 2026-03-08 22:28:41 [INFO] scanner: Scanning [503/503] MANTRAUSDT
 2026-03-08 22:28:42 [INFO] scanner: Cycle finished in 326.5s
+2026-03-09 13:03:57 [INFO] main: ============================================================
+2026-03-09 13:03:57 [INFO] main:   Binance Futures Volume Scanner  —  starting
+2026-03-09 13:03:57 [INFO] main: ============================================================
+2026-03-09 13:03:57 [INFO] main: Health check server started on port 8080
+2026-03-09 13:03:57 [INFO] binance_client: Proxy configured: http://ombqfuwr:k6mr1wnkkbcs@194.39.32.164:6461
+2026-03-09 13:03:57 [INFO] notifier: Telegram bot validated: @BinanceCoinsVolumeScanner_Bot
+2026-03-09 13:03:57 [INFO] tracker: Tracker initialised  (max_age=168h, update=300s, TP targets=[5, 10, 15, 20], reversal=True)
+2026-03-09 13:03:57 [INFO] tracker: Tracker background loop started (every 300s)
+2026-03-09 13:03:57 [INFO] bot_commands: Telegram command listener started
+2026-03-09 13:03:57 [INFO] main: Tracker + command listener started
+2026-03-09 13:03:57 [INFO] scanner: Scanner loop started  (interval 900s, need 21 candles/symbol, cooldown 12.0h)
+2026-03-09 13:03:59 [INFO] binance_client: Loaded 544 USDT perpetual symbols from exchange info
+2026-03-09 13:04:00 [INFO] market_cap: Refreshing market-cap cache from CoinGecko …
+2026-03-09 13:06:56 [INFO] main: Received signal 15 — shutting down …
+2026-03-09 13:06:59 [INFO] main: ============================================================
+2026-03-09 13:06:59 [INFO] main:   Binance Futures Volume Scanner  —  starting
+2026-03-09 13:06:59 [INFO] main: ============================================================
+2026-03-09 13:06:59 [INFO] main: Health check server started on port 8080
+2026-03-09 13:06:59 [INFO] binance_client: Proxy configured: http://ombqfuwr:k6mr1wnkkbcs@194.39.32.164:6461
+2026-03-09 13:07:00 [INFO] notifier: Telegram bot validated: @BinanceCoinsVolumeScanner_Bot
+2026-03-09 13:07:00 [INFO] tracker: Tracker initialised  (max_age=168h, update=300s, TP targets=[5, 10, 15, 20], reversal=True)
+2026-03-09 13:07:00 [INFO] tracker: Tracker background loop started (every 300s)
+2026-03-09 13:07:00 [INFO] bot_commands: Telegram command listener started
+2026-03-09 13:07:00 [INFO] main: Tracker + command listener started
+2026-03-09 13:07:00 [INFO] scanner: Scanner loop started  (interval 900s, need 21 candles/symbol, cooldown 12.0h)
+2026-03-09 13:07:02 [INFO] binance_client: Loaded 544 USDT perpetual symbols from exchange info
+2026-03-09 13:07:04 [INFO] market_cap: Refreshing market-cap cache from CoinGecko …
+2026-03-09 13:10:47 [INFO] market_cap: Market-cap cache updated: 2824 coins loaded (12 pages in ~240s)
+2026-03-09 13:10:47 [INFO] scanner: Targets: 503 / 544  (mcap ≤ $1000M, 2 excluded, 0 on cooldown)
+2026-03-09 13:10:47 [INFO] scanner: Scanning [1/503] DASHUSDT
+2026-03-09 13:10:48 [INFO] scanner: Scanning [2/503] XTZUSDT
+2026-03-09 13:10:49 [INFO] scanner: Scanning [3/503] ATOMUSDT
+2026-03-09 13:10:49 [INFO] scanner: Scanning [4/503] ONTUSDT
+2026-03-09 13:10:50 [INFO] scanner: Scanning [5/503] IOTAUSDT
+2026-03-09 13:10:50 [INFO] scanner: Scanning [6/503] BATUSDT
+2026-03-09 13:10:51 [INFO] scanner: Scanning [7/503] VETUSDT
+2026-03-09 13:10:52 [INFO] scanner: Scanning [8/503] NEOUSDT
+2026-03-09 13:10:52 [INFO] scanner: Scanning [9/503] QTUMUSDT
+2026-03-09 13:10:53 [INFO] scanner: Scanning [10/503] IOSTUSDT
+2026-03-09 13:10:53 [INFO] scanner: Scanning [11/503] THETAUSDT
+2026-03-09 13:10:54 [INFO] scanner: Scanning [12/503] ALGOUSDT
+2026-03-09 13:10:54 [INFO] scanner: Scanning [13/503] ZILUSDT
+2026-03-09 13:10:55 [INFO] scanner: Scanning [14/503] KNCUSDT
+2026-03-09 13:10:56 [INFO] scanner: Scanning [15/503] ZRXUSDT
+2026-03-09 13:10:56 [INFO] scanner: Scanning [16/503] COMPUSDT
+2026-03-09 13:10:57 [INFO] scanner: Scanning [17/503] KAVAUSDT
+2026-03-09 13:10:57 [INFO] scanner: Scanning [18/503] BANDUSDT
+2026-03-09 13:10:58 [INFO] scanner: Scanning [19/503] RLCUSDT
+2026-03-09 13:10:59 [INFO] scanner: Scanning [20/503] SNXUSDT
+2026-03-09 13:10:59 [INFO] scanner: Scanning [21/503] YFIUSDT
+2026-03-09 13:11:00 [INFO] scanner: Scanning [22/503] CRVUSDT
+2026-03-09 13:11:00 [INFO] scanner: Scanning [23/503] TRBUSDT
+2026-03-09 13:11:01 [INFO] scanner: Scanning [24/503] RUNEUSDT
+2026-03-09 13:11:02 [INFO] scanner: Scanning [25/503] SUSHIUSDT
+2026-03-09 13:11:02 [INFO] scanner: Scanning [26/503] EGLDUSDT
+2026-03-09 13:11:03 [INFO] scanner: Scanning [27/503] ICXUSDT
+2026-03-09 13:11:03 [INFO] scanner: Scanning [28/503] STORJUSDT
+2026-03-09 13:11:04 [INFO] scanner: Scanning [29/503] ENJUSDT
+2026-03-09 13:11:04 [INFO] scanner: Scanning [30/503] KSMUSDT
+2026-03-09 13:11:05 [INFO] scanner: Scanning [31/503] FILUSDT
+2026-03-09 13:11:06 [INFO] scanner: Scanning [32/503] RSRUSDT
+2026-03-09 13:11:06 [INFO] scanner: Scanning [33/503] LRCUSDT
+2026-03-09 13:11:07 [INFO] scanner: Scanning [34/503] BELUSDT
+2026-03-09 13:11:07 [INFO] scanner: Scanning [35/503] AXSUSDT
+2026-03-09 13:11:08 [INFO] scanner: Scanning [36/503] ZENUSDT
+2026-03-09 13:11:09 [INFO] scanner: Scanning [37/503] SKLUSDT
+2026-03-09 13:11:09 [INFO] scanner: Scanning [38/503] GRTUSDT
+2026-03-09 13:11:10 [INFO] scanner: Scanning [39/503] 1INCHUSDT
+2026-03-09 13:11:10 [INFO] scanner: Scanning [40/503] CHZUSDT
+2026-03-09 13:11:11 [INFO] scanner: Scanning [41/503] SANDUSDT
+2026-03-09 13:11:12 [INFO] scanner: Scanning [42/503] ANKRUSDT
+2026-03-09 13:11:12 [INFO] scanner: Scanning [43/503] RVNUSDT
+2026-03-09 13:11:13 [INFO] scanner: Scanning [44/503] SFPUSDT
+2026-03-09 13:11:13 [INFO] scanner: Scanning [45/503] COTIUSDT
+2026-03-09 13:11:14 [INFO] scanner: Scanning [46/503] CHRUSDT
+2026-03-09 13:11:14 [INFO] scanner: Scanning [47/503] MANAUSDT
+2026-03-09 13:11:15 [INFO] scanner: Scanning [48/503] ALICEUSDT
+2026-03-09 13:11:16 [INFO] scanner: Scanning [49/503] ONEUSDT
+2026-03-09 13:11:16 [INFO] scanner: Scanning [50/503] DENTUSDT
+2026-03-09 13:11:17 [INFO] scanner: Scanning [51/503] CELRUSDT
+2026-03-09 13:11:17 [INFO] scanner: Scanning [52/503] HOTUSDT
+2026-03-09 13:11:18 [INFO] scanner: Scanning [53/503] MTLUSDT
+2026-03-09 13:11:19 [INFO] scanner: Scanning [54/503] OGNUSDT
+2026-03-09 13:11:19 [INFO] scanner: Scanning [55/503] GTCUSDT
+2026-03-09 13:11:20 [INFO] scanner: Scanning [56/503] IOTXUSDT
+2026-03-09 13:11:20 [INFO] scanner: Scanning [57/503] C98USDT
+2026-03-09 13:11:21 [INFO] scanner: Scanning [58/503] MASKUSDT
+2026-03-09 13:11:21 [INFO] scanner: Scanning [59/503] ATAUSDT
+2026-03-09 13:11:23 [INFO] scanner: Scanning [60/503] DYDXUSDT
+2026-03-09 13:11:23 [INFO] scanner: Scanning [61/503] 1000XECUSDT
+2026-03-09 13:11:24 [INFO] scanner: Scanning [62/503] GALAUSDT
+2026-03-09 13:11:24 [INFO] scanner: Scanning [63/503] CELOUSDT
+2026-03-09 13:11:25 [INFO] scanner: Scanning [64/503] ARUSDT
+2026-03-09 13:11:25 [INFO] scanner: Scanning [65/503] ARPAUSDT
+2026-03-09 13:11:26 [INFO] scanner: Scanning [66/503] CTSIUSDT
+2026-03-09 13:11:27 [INFO] scanner: Scanning [67/503] LPTUSDT
+2026-03-09 13:11:28 [INFO] scanner: Scanning [68/503] ENSUSDT
+2026-03-09 13:11:29 [INFO] scanner: Scanning [69/503] PEOPLEUSDT
+2026-03-09 13:11:29 [INFO] scanner: Scanning [70/503] ROSEUSDT
+2026-03-09 13:11:30 [INFO] scanner: Scanning [71/503] DUSKUSDT
+2026-03-09 13:11:30 [INFO] scanner: Scanning [72/503] FLOWUSDT
+2026-03-09 13:11:31 [INFO] scanner: FLOWUSDT  volume spike 8.36x (RVOL)  24h chg: 17.0%
+2026-03-09 13:11:31 [INFO] scanner: FLOWUSDT  candle OK — GREEN body:59% wick:17% trend:5/5
+2026-03-09 13:11:31 [INFO] scanner: FLOWUSDT  rejected — breakout margin 5.00% > max 5.00% (buying the top)
+2026-03-09 13:11:31 [INFO] scanner: Scanning [73/503] IMXUSDT
+2026-03-09 13:11:32 [INFO] scanner: Scanning [74/503] API3USDT
+2026-03-09 13:11:32 [INFO] scanner: Scanning [75/503] GMTUSDT
+2026-03-09 13:11:33 [INFO] scanner: Scanning [76/503] APEUSDT
+2026-03-09 13:11:33 [INFO] scanner: Scanning [77/503] WOOUSDT
+2026-03-09 13:11:34 [INFO] scanner: Scanning [78/503] JASMYUSDT
+2026-03-09 13:11:35 [INFO] scanner: Scanning [79/503] OPUSDT
+2026-03-09 13:11:35 [INFO] scanner: Scanning [80/503] INJUSDT
+2026-03-09 13:11:36 [INFO] scanner: Scanning [81/503] STGUSDT
+2026-03-09 13:11:36 [INFO] scanner: Scanning [82/503] SPELLUSDT
+2026-03-09 13:11:37 [INFO] scanner: Scanning [83/503] 1000LUNCUSDT
+2026-03-09 13:11:38 [INFO] scanner: Scanning [84/503] LUNA2USDT
+2026-03-09 13:11:38 [INFO] scanner: Scanning [85/503] LDOUSDT
+2026-03-09 13:11:39 [INFO] scanner: Scanning [86/503] APTUSDT
+2026-03-09 13:11:39 [INFO] scanner: Scanning [87/503] QNTUSDT
+2026-03-09 13:11:40 [INFO] scanner: Scanning [88/503] FETUSDT
+2026-03-09 13:11:40 [INFO] scanner: Scanning [89/503] HOOKUSDT
+2026-03-09 13:11:41 [INFO] scanner: Scanning [90/503] MAGICUSDT
+2026-03-09 13:11:42 [INFO] scanner: Scanning [91/503] TUSDT
+2026-03-09 13:11:42 [INFO] scanner: Scanning [92/503] HIGHUSDT
+2026-03-09 13:11:43 [INFO] scanner: Scanning [93/503] MINAUSDT
+2026-03-09 13:11:43 [INFO] scanner: Scanning [94/503] ASTRUSDT
+2026-03-09 13:11:44 [INFO] scanner: Scanning [95/503] PHBUSDT
+2026-03-09 13:11:44 [INFO] scanner: Scanning [96/503] GMXUSDT
+2026-03-09 13:11:45 [INFO] scanner: Scanning [97/503] CFXUSDT
+2026-03-09 13:11:46 [INFO] scanner: Scanning [98/503] STXUSDT
+2026-03-09 13:11:46 [INFO] scanner: Scanning [99/503] ACHUSDT
+2026-03-09 13:11:47 [INFO] scanner: Scanning [100/503] SSVUSDT
+2026-03-09 13:11:47 [INFO] scanner: Scanning [101/503] CKBUSDT
+2026-03-09 13:11:48 [INFO] scanner: Scanning [102/503] TRUUSDT
+2026-03-09 13:11:49 [INFO] scanner: Scanning [103/503] LQTYUSDT
+2026-03-09 13:11:49 [INFO] scanner: Scanning [104/503] IDUSDT
+2026-03-09 13:11:50 [INFO] scanner: Scanning [105/503] ARBUSDT
+2026-03-09 13:11:50 [INFO] scanner: Scanning [106/503] JOEUSDT
+2026-03-09 13:11:51 [INFO] scanner: Scanning [107/503] TLMUSDT
+2026-03-09 13:11:52 [INFO] scanner: Scanning [108/503] RDNTUSDT
+2026-03-09 13:11:52 [INFO] scanner: Scanning [109/503] HFTUSDT
+2026-03-09 13:11:53 [INFO] scanner: Scanning [110/503] XVSUSDT
+2026-03-09 13:11:53 [INFO] scanner: Scanning [111/503] BLURUSDT
+2026-03-09 13:11:54 [INFO] scanner: Scanning [112/503] EDUUSDT
+2026-03-09 13:11:55 [INFO] scanner: Scanning [113/503] 1000FLOKIUSDT
+2026-03-09 13:11:55 [INFO] scanner: Scanning [114/503] UMAUSDT
+2026-03-09 13:11:56 [INFO] scanner: Scanning [115/503] NMRUSDT
+2026-03-09 13:11:56 [INFO] scanner: Scanning [116/503] MAVUSDT
+2026-03-09 13:11:57 [INFO] scanner: Scanning [117/503] XVGUSDT
+2026-03-09 13:11:58 [INFO] scanner: Scanning [118/503] PENDLEUSDT
+2026-03-09 13:11:58 [INFO] scanner: Scanning [119/503] ARKMUSDT
+2026-03-09 13:11:59 [INFO] scanner: Scanning [120/503] AGLDUSDT
+2026-03-09 13:11:59 [INFO] scanner: Scanning [121/503] YGGUSDT
+2026-03-09 13:12:00 [INFO] scanner: Scanning [122/503] DODOXUSDT
+2026-03-09 13:12:00 [INFO] scanner: Scanning [123/503] BNTUSDT
+2026-03-09 13:12:01 [INFO] scanner: Scanning [124/503] OXTUSDT
+2026-03-09 13:12:02 [INFO] scanner: Scanning [125/503] SEIUSDT
+2026-03-09 13:12:02 [INFO] scanner: Scanning [126/503] CYBERUSDT
+2026-03-09 13:12:03 [INFO] scanner: Scanning [127/503] ARKUSDT
+2026-03-09 13:12:03 [INFO] scanner: Scanning [128/503] BICOUSDT
+2026-03-09 13:12:04 [INFO] scanner: Scanning [129/503] BIGTIMEUSDT
+2026-03-09 13:12:05 [INFO] scanner: Scanning [130/503] WAXPUSDT
+2026-03-09 13:12:05 [INFO] scanner: Scanning [131/503] BSVUSDT
+2026-03-09 13:12:06 [INFO] scanner: Scanning [132/503] RIFUSDT
+2026-03-09 13:12:06 [INFO] scanner: Scanning [133/503] POLYXUSDT
+2026-03-09 13:12:07 [INFO] scanner: Scanning [134/503] GASUSDT
+2026-03-09 13:12:07 [INFO] scanner: Scanning [135/503] POWRUSDT
+2026-03-09 13:12:08 [INFO] scanner: Scanning [136/503] TIAUSDT
+2026-03-09 13:12:09 [INFO] scanner: Scanning [137/503] CAKEUSDT
+2026-03-09 13:12:09 [INFO] scanner: Scanning [138/503] MEMEUSDT
+2026-03-09 13:12:10 [INFO] scanner: Scanning [139/503] TWTUSDT
+2026-03-09 13:12:10 [INFO] scanner: Scanning [140/503] ORDIUSDT
+2026-03-09 13:12:11 [INFO] scanner: Scanning [141/503] STEEMUSDT
+2026-03-09 13:12:11 [INFO] scanner: Scanning [142/503] ILVUSDT
+2026-03-09 13:12:12 [INFO] scanner: Scanning [143/503] NTRNUSDT
+2026-03-09 13:12:13 [INFO] scanner: Scanning [144/503] KASUSDT
+2026-03-09 13:12:13 [INFO] scanner: Scanning [145/503] BEAMXUSDT
+2026-03-09 13:12:14 [INFO] scanner: Scanning [146/503] 1000BONKUSDT
+2026-03-09 13:12:14 [INFO] scanner: Scanning [147/503] PYTHUSDT
+2026-03-09 13:12:15 [INFO] scanner: Scanning [148/503] SUPERUSDT
+2026-03-09 13:12:16 [INFO] scanner: Scanning [149/503] USTCUSDT
+2026-03-09 13:12:16 [INFO] scanner: Scanning [150/503] ONGUSDT
+2026-03-09 13:12:17 [INFO] scanner: Scanning [151/503] ETHWUSDT
+2026-03-09 13:12:17 [INFO] scanner: Scanning [152/503] JTOUSDT
+2026-03-09 13:12:18 [INFO] scanner: Scanning [153/503] 1000SATSUSDT
+2026-03-09 13:12:19 [INFO] scanner: Scanning [154/503] AUCTIONUSDT
+2026-03-09 13:12:19 [INFO] scanner: Scanning [155/503] 1000RATSUSDT
+2026-03-09 13:12:20 [INFO] scanner: Scanning [156/503] ACEUSDT
+2026-03-09 13:12:20 [INFO] scanner: Scanning [157/503] MOVRUSDT
+2026-03-09 13:12:21 [INFO] scanner: Scanning [158/503] NFPUSDT
+2026-03-09 13:12:21 [INFO] scanner: Scanning [159/503] AIUSDT
+2026-03-09 13:12:22 [INFO] scanner: Scanning [160/503] XAIUSDT
+2026-03-09 13:12:23 [INFO] scanner: Scanning [161/503] WIFUSDT
+2026-03-09 13:12:23 [INFO] scanner: Scanning [162/503] MANTAUSDT
+2026-03-09 13:12:24 [INFO] scanner: Scanning [163/503] LSKUSDT
+2026-03-09 13:12:24 [INFO] scanner: Scanning [164/503] ALTUSDT
+2026-03-09 13:12:25 [INFO] scanner: Scanning [165/503] JUPUSDT
+2026-03-09 13:12:26 [INFO] scanner: Scanning [166/503] ZETAUSDT
+2026-03-09 13:12:26 [INFO] scanner: Scanning [167/503] RONINUSDT
+2026-03-09 13:12:27 [INFO] scanner: Scanning [168/503] DYMUSDT
+2026-03-09 13:12:27 [INFO] scanner: Scanning [169/503] PIXELUSDT
+2026-03-09 13:12:28 [INFO] scanner: Scanning [170/503] STRKUSDT
+2026-03-09 13:12:29 [INFO] scanner: Scanning [171/503] GLMUSDT
+2026-03-09 13:12:29 [INFO] scanner: Scanning [172/503] PORTALUSDT
+2026-03-09 13:12:30 [INFO] scanner: Scanning [173/503] AXLUSDT
+2026-03-09 13:12:30 [INFO] scanner: Scanning [174/503] METISUSDT
+2026-03-09 13:12:31 [INFO] scanner: Scanning [175/503] AEVOUSDT
+2026-03-09 13:12:31 [INFO] scanner: Scanning [176/503] VANRYUSDT
+2026-03-09 13:12:32 [INFO] scanner: Scanning [177/503] BOMEUSDT
+2026-03-09 13:12:33 [INFO] scanner: Scanning [178/503] ETHFIUSDT
+2026-03-09 13:12:33 [INFO] scanner: Scanning [179/503] ENAUSDT
+2026-03-09 13:12:34 [INFO] scanner: Scanning [180/503] WUSDT
+2026-03-09 13:12:34 [INFO] scanner: Scanning [181/503] TNSRUSDT
+2026-03-09 13:12:35 [INFO] scanner: Scanning [182/503] SAGAUSDT
+2026-03-09 13:12:36 [INFO] scanner: Scanning [183/503] REZUSDT
+2026-03-09 13:12:37 [INFO] scanner: Scanning [184/503] BBUSDT
+2026-03-09 13:12:37 [INFO] scanner: Scanning [185/503] NOTUSDT
+2026-03-09 13:12:38 [INFO] scanner: Scanning [186/503] TURBOUSDT
+2026-03-09 13:12:38 [INFO] scanner: Scanning [187/503] IOUSDT
+2026-03-09 13:12:39 [INFO] scanner: Scanning [188/503] ZKUSDT
+2026-03-09 13:12:40 [INFO] scanner: Scanning [189/503] MEWUSDT
+2026-03-09 13:12:40 [INFO] scanner: Scanning [190/503] LISTAUSDT
+2026-03-09 13:12:41 [INFO] scanner: Scanning [191/503] ZROUSDT
+2026-03-09 13:12:41 [INFO] scanner: Scanning [192/503] RENDERUSDT
+2026-03-09 13:12:42 [INFO] scanner: Scanning [193/503] BANANAUSDT
+2026-03-09 13:12:42 [INFO] scanner: Scanning [194/503] RAREUSDT
+2026-03-09 13:12:43 [INFO] scanner: Scanning [195/503] GUSDT
+2026-03-09 13:12:44 [INFO] scanner: Scanning [196/503] SYNUSDT
+2026-03-09 13:12:45 [INFO] scanner: Scanning [197/503] SYSUSDT
+2026-03-09 13:12:45 [INFO] scanner: Scanning [198/503] BRETTUSDT
+2026-03-09 13:12:46 [INFO] scanner: Scanning [199/503] POPCATUSDT
+2026-03-09 13:12:46 [INFO] scanner: Scanning [200/503] SUNUSDT
+2026-03-09 13:12:47 [INFO] scanner: Scanning [201/503] DOGSUSDT
+2026-03-09 13:12:48 [INFO] scanner: Scanning [202/503] MBOXUSDT
+2026-03-09 13:12:48 [INFO] scanner: Scanning [203/503] FLUXUSDT
+2026-03-09 13:12:49 [INFO] scanner: Scanning [204/503] RPLUSDT
+2026-03-09 13:12:49 [INFO] scanner: Scanning [205/503] 1MBABYDOGEUSDT
+2026-03-09 13:12:50 [INFO] scanner: Scanning [206/503] NEIROUSDT
+2026-03-09 13:12:50 [INFO] scanner: Scanning [207/503] FIDAUSDT
+2026-03-09 13:12:51 [INFO] scanner: Scanning [208/503] FIOUSDT
+2026-03-09 13:12:52 [INFO] scanner: Scanning [209/503] CATIUSDT
+2026-03-09 13:12:52 [INFO] scanner: Scanning [210/503] HMSTRUSDT
+2026-03-09 13:12:53 [INFO] scanner: Scanning [211/503] COSUSDT
+2026-03-09 13:12:53 [INFO] scanner: Scanning [212/503] EIGENUSDT
+2026-03-09 13:12:54 [INFO] scanner: Scanning [213/503] DIAUSDT
+2026-03-09 13:12:55 [INFO] scanner: Scanning [214/503] 1000CATUSDT
+2026-03-09 13:12:55 [INFO] scanner: Scanning [215/503] SCRUSDT
+2026-03-09 13:12:56 [INFO] scanner: Scanning [216/503] GOATUSDT
+2026-03-09 13:12:56 [INFO] scanner: Scanning [217/503] MOODENGUSDT
+2026-03-09 13:12:57 [INFO] scanner: Scanning [218/503] SAFEUSDT
+2026-03-09 13:12:57 [INFO] scanner: Scanning [219/503] SANTOSUSDT
+2026-03-09 13:12:58 [INFO] scanner: Scanning [220/503] COWUSDT
+2026-03-09 13:12:59 [INFO] scanner: Scanning [221/503] CETUSUSDT
+2026-03-09 13:12:59 [INFO] scanner: Scanning [222/503] 1000000MOGUSDT
+2026-03-09 13:13:00 [INFO] scanner: Scanning [223/503] GRASSUSDT
+2026-03-09 13:13:00 [INFO] scanner: Scanning [224/503] DRIFTUSDT
+2026-03-09 13:13:01 [INFO] scanner: Scanning [225/503] ACTUSDT
+2026-03-09 13:13:02 [INFO] scanner: Scanning [226/503] PNUTUSDT
+2026-03-09 13:13:02 [INFO] scanner: Scanning [227/503] HIPPOUSDT
+2026-03-09 13:13:03 [INFO] scanner: Scanning [228/503] DEGENUSDT
+2026-03-09 13:13:03 [INFO] scanner: Scanning [229/503] BANUSDT
+2026-03-09 13:13:04 [INFO] scanner: Scanning [230/503] AKTUSDT
+2026-03-09 13:13:05 [INFO] scanner: Scanning [231/503] SCRTUSDT
+2026-03-09 13:13:05 [INFO] scanner: Scanning [232/503] 1000CHEEMSUSDT
+2026-03-09 13:13:06 [INFO] scanner: Scanning [233/503] 1000WHYUSDT
+2026-03-09 13:13:06 [INFO] scanner: Scanning [234/503] THEUSDT
+2026-03-09 13:13:07 [INFO] scanner: Scanning [235/503] CHILLGUYUSDT
+2026-03-09 13:13:07 [INFO] scanner: Scanning [236/503] KAIAUSDT
+2026-03-09 13:13:08 [INFO] scanner: Scanning [237/503] AEROUSDT
+2026-03-09 13:13:09 [INFO] scanner: Scanning [238/503] ACXUSDT
+2026-03-09 13:13:09 [INFO] scanner: Scanning [239/503] ORCAUSDT
+2026-03-09 13:13:10 [INFO] scanner: Scanning [240/503] MOVEUSDT
+2026-03-09 13:13:10 [INFO] scanner: Scanning [241/503] RAYSOLUSDT
+2026-03-09 13:13:11 [INFO] scanner: Scanning [242/503] KOMAUSDT
+2026-03-09 13:13:12 [INFO] scanner: Scanning [243/503] VIRTUALUSDT
+2026-03-09 13:13:12 [INFO] scanner: Scanning [244/503] SPXUSDT
+2026-03-09 13:13:13 [INFO] scanner: Scanning [245/503] MEUSDT
+2026-03-09 13:13:13 [INFO] scanner: Scanning [246/503] AVAUSDT
+2026-03-09 13:13:14 [INFO] scanner: Scanning [247/503] DEGOUSDT
+2026-03-09 13:13:14 [INFO] scanner: Scanning [248/503] VELODROMEUSDT
+2026-03-09 13:13:15 [INFO] scanner: Scanning [249/503] MOCAUSDT
+2026-03-09 13:13:16 [INFO] scanner: Scanning [250/503] VANAUSDT
+2026-03-09 13:13:16 [INFO] scanner: Scanning [251/503] PENGUUSDT
+2026-03-09 13:13:17 [INFO] scanner: Scanning [252/503] LUMIAUSDT
+2026-03-09 13:13:17 [INFO] scanner: Scanning [253/503] USUALUSDT
+2026-03-09 13:13:18 [INFO] scanner: Scanning [254/503] AIXBTUSDT
+2026-03-09 13:13:19 [INFO] scanner: Scanning [255/503] FARTCOINUSDT
+2026-03-09 13:13:19 [INFO] scanner: Scanning [256/503] KMNOUSDT
+2026-03-09 13:13:20 [INFO] scanner: Scanning [257/503] CGPTUSDT
+2026-03-09 13:13:20 [INFO] scanner: Scanning [258/503] HIVEUSDT
+2026-03-09 13:13:21 [INFO] scanner: Scanning [259/503] DEXEUSDT
+2026-03-09 13:13:21 [INFO] scanner: Scanning [260/503] PHAUSDT
+2026-03-09 13:13:22 [INFO] scanner: Scanning [261/503] GRIFFAINUSDT
+2026-03-09 13:13:23 [INFO] scanner: Scanning [262/503] ZEREBROUSDT
+2026-03-09 13:13:23 [INFO] scanner: Scanning [263/503] BIOUSDT
+2026-03-09 13:13:24 [INFO] scanner: Scanning [264/503] COOKIEUSDT
+2026-03-09 13:13:24 [INFO] scanner: Scanning [265/503] ALCHUSDT
+2026-03-09 13:13:25 [INFO] scanner: Scanning [266/503] SWARMSUSDT
+2026-03-09 13:13:26 [INFO] scanner: Scanning [267/503] SONICUSDT
+2026-03-09 13:13:26 [INFO] scanner: Scanning [268/503] DUSDT
+2026-03-09 13:13:27 [INFO] scanner: Scanning [269/503] PROMUSDT
+2026-03-09 13:13:27 [INFO] scanner: Scanning [270/503] SUSDT
+2026-03-09 13:13:28 [INFO] scanner: Scanning [271/503] SOLVUSDT
+2026-03-09 13:13:28 [INFO] scanner: Scanning [272/503] ARCUSDT
+2026-03-09 13:13:29 [INFO] scanner: Scanning [273/503] AVAAIUSDT
+2026-03-09 13:13:30 [INFO] scanner: Scanning [274/503] TRUMPUSDT
+2026-03-09 13:13:30 [INFO] scanner: Scanning [275/503] MELANIAUSDT
+2026-03-09 13:13:31 [INFO] scanner: Scanning [276/503] VTHOUSDT
+2026-03-09 13:13:31 [INFO] scanner: Scanning [277/503] ANIMEUSDT
+2026-03-09 13:13:32 [INFO] scanner: Scanning [278/503] VINEUSDT
+2026-03-09 13:13:33 [INFO] scanner: Scanning [279/503] PIPPINUSDT
+2026-03-09 13:13:33 [INFO] scanner: Scanning [280/503] VVVUSDT
+2026-03-09 13:13:34 [INFO] scanner: Scanning [281/503] BERAUSDT
+2026-03-09 13:13:34 [INFO] scanner: Scanning [282/503] TSTUSDT
+2026-03-09 13:13:35 [INFO] scanner: Scanning [283/503] LAYERUSDT
+2026-03-09 13:13:36 [INFO] scanner: Scanning [284/503] HEIUSDT
+2026-03-09 13:13:36 [INFO] scanner: Scanning [285/503] B3USDT
+2026-03-09 13:13:37 [INFO] scanner: Scanning [286/503] IPUSDT
+2026-03-09 13:13:37 [INFO] scanner: Scanning [287/503] GPSUSDT
+2026-03-09 13:13:38 [INFO] scanner: Scanning [288/503] SHELLUSDT
+2026-03-09 13:13:38 [INFO] scanner: Scanning [289/503] KAITOUSDT
+2026-03-09 13:13:39 [INFO] scanner: Scanning [290/503] REDUSDT
+2026-03-09 13:13:40 [INFO] scanner: Scanning [291/503] VICUSDT
+2026-03-09 13:13:41 [INFO] scanner: Scanning [292/503] EPICUSDT
+2026-03-09 13:13:41 [INFO] scanner: Scanning [293/503] BMTUSDT
+2026-03-09 13:13:42 [INFO] scanner: Scanning [294/503] MUBARAKUSDT
+2026-03-09 13:13:42 [INFO] scanner: Scanning [295/503] FORMUSDT
+2026-03-09 13:13:43 [INFO] scanner: Scanning [296/503] TUTUSDT
+2026-03-09 13:13:44 [INFO] scanner: Scanning [297/503] BROCCOLI714USDT
+2026-03-09 13:13:44 [INFO] scanner: Scanning [298/503] BROCCOLIF3BUSDT
+2026-03-09 13:13:45 [INFO] scanner: Scanning [299/503] SIRENUSDT
+2026-03-09 13:13:45 [INFO] scanner: Scanning [300/503] BANANAS31USDT
+2026-03-09 13:13:46 [INFO] scanner: Scanning [301/503] BRUSDT
+2026-03-09 13:13:47 [INFO] scanner: Scanning [302/503] PLUMEUSDT
+2026-03-09 13:13:47 [INFO] scanner: Scanning [303/503] NILUSDT
+2026-03-09 13:13:48 [INFO] scanner: Scanning [304/503] PARTIUSDT
+2026-03-09 13:13:48 [INFO] scanner: Scanning [305/503] JELLYJELLYUSDT
+2026-03-09 13:13:49 [INFO] scanner: Scanning [306/503] MAVIAUSDT
+2026-03-09 13:13:49 [INFO] scanner: Scanning [307/503] WALUSDT
+2026-03-09 13:13:50 [INFO] scanner: Scanning [308/503] FUNUSDT
+2026-03-09 13:13:51 [INFO] scanner: Scanning [309/503] MLNUSDT
+2026-03-09 13:13:51 [INFO] scanner: Scanning [310/503] GUNUSDT
+2026-03-09 13:13:52 [INFO] scanner: Scanning [311/503] ATHUSDT
+2026-03-09 13:13:52 [INFO] scanner: Scanning [312/503] BABYUSDT
+2026-03-09 13:13:53 [INFO] scanner: Scanning [313/503] FORTHUSDT
+2026-03-09 13:13:53 [INFO] main: Received signal 15 — shutting down …
+2026-03-09 13:13:54 [INFO] scanner: Cycle finished in 413.4s
+2026-03-09 13:13:54 [INFO] main: Shutdown complete.
+2026-03-09 13:13:54 [INFO] main: ============================================================
+2026-03-09 13:13:54 [INFO] main:   Binance Futures Volume Scanner  —  starting
+2026-03-09 13:13:54 [INFO] main: ============================================================
+2026-03-09 13:13:54 [INFO] main: Health check server started on port 8080
+2026-03-09 13:13:54 [INFO] binance_client: Proxy configured: http://ombqfuwr:k6mr1wnkkbcs@194.39.32.164:6461
+2026-03-09 13:13:55 [INFO] notifier: Telegram bot validated: @BinanceCoinsVolumeScanner_Bot
+2026-03-09 13:13:55 [INFO] tracker: Tracker initialised  (max_age=168h, update=300s, TP targets=[5, 10, 15, 20], reversal=True)
+2026-03-09 13:13:55 [INFO] tracker: Tracker background loop started (every 300s)
+2026-03-09 13:13:55 [INFO] bot_commands: Telegram command listener started
+2026-03-09 13:13:55 [INFO] main: Tracker + command listener started
+2026-03-09 13:13:55 [INFO] scanner: Scanner loop started  (interval 900s, need 21 candles/symbol, cooldown 12.0h)
+2026-03-09 13:13:57 [INFO] binance_client: Loaded 544 USDT perpetual symbols from exchange info
+2026-03-09 13:13:58 [INFO] market_cap: Refreshing market-cap cache from CoinGecko …

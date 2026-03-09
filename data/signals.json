@@ -3,7 +3,7 @@
     "symbol": "BABYUSDT",
     "entry_price": 0.01583,
     "highest_price": 0.01583,
-    "current_price": 0.01452036,
+    "current_price": 0.01425,
     "alert_time_ts": 1772996885.3401093,
     "alert_time": "2026-03-08 19:08:05 UTC",
     "timeframe": "1h",
@@ -27,6 +27,6 @@
     "btc_price": 66759.0,
     "tp_sent": [],
     "reversal_warned": false,
-    "last_update_ts": 1773008906.8170955
+    "last_update_ts": 1773062036.6534355
   }
 ]
