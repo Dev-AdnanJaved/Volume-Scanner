@@ -2956,3 +2956,17 @@
 2026-03-09 13:30:54 [INFO] scanner: Scanning [211/503] COSUSDT
 2026-03-09 13:30:55 [INFO] scanner: Scanning [212/503] EIGENUSDT
 2026-03-09 13:30:56 [INFO] scanner: Scanning [213/503] DIAUSDT
+2026-03-09 13:49:51 [INFO] main: ============================================================
+2026-03-09 13:49:51 [INFO] main:   Binance Futures Volume Scanner  —  starting
+2026-03-09 13:49:51 [INFO] main: ============================================================
+2026-03-09 13:49:51 [INFO] main: Health check server started on port 8080
+2026-03-09 13:49:51 [INFO] binance_client: Proxy configured: http://ombqfuwr:k6mr1wnkkbcs@194.39.32.164:6461
+2026-03-09 13:49:52 [INFO] notifier: Telegram bot validated: @BinanceCoinsVolumeScanner_Bot
+2026-03-09 13:49:52 [INFO] tracker: Tracker initialised  (max_age=168h, update=300s, TP targets=[5, 10, 15, 20], reversal=True)
+2026-03-09 13:49:52 [INFO] tracker: Tracker background loop started (every 300s)
+2026-03-09 13:49:52 [INFO] bot_commands: Telegram command listener started
+2026-03-09 13:49:52 [INFO] main: Tracker + command listener started
+2026-03-09 13:49:52 [INFO] scanner: Scanner loop started  (interval 900s, need 21 candles/symbol, cooldown 12.0h)
+2026-03-09 13:49:54 [INFO] binance_client: Loaded 544 USDT perpetual symbols from exchange info
+2026-03-09 13:49:56 [INFO] main: Received signal 15 — shutting down …
+2026-03-09 13:49:56 [INFO] market_cap: Refreshing market-cap cache from CoinGecko …
