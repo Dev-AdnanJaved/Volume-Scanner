@@ -7047,3 +7047,292 @@
 2026-03-11 04:04:50 [INFO] scanner: 🚨 SIGNAL  JOEUSDT  brk:+2.65%  vols:$159K→$209K→$471K  24h:14.5%
 2026-03-11 04:04:50 [INFO] scanner: Cycle finished in 36.4s
 2026-03-11 04:04:50 [INFO] main: Shutdown complete.
+2026-03-11 04:10:04 [INFO] main: ============================================================
+2026-03-11 04:10:04 [INFO] main:   Binance Futures Volume Scanner  —  starting
+2026-03-11 04:10:04 [INFO] main: ============================================================
+2026-03-11 04:10:04 [INFO] main: Health check server started on port 8080
+2026-03-11 04:10:04 [INFO] notifier: Telegram bot validated: @BinanceCoinsVolumeScanner_Bot
+2026-03-11 04:10:04 [INFO] main: MarketCapProvider disabled
+2026-03-11 04:10:04 [INFO] tracker: Tracker initialised  (max_age=168h, update=300s, TP targets=[5, 10, 15, 20], reversal=True, report_hour=00:00 UTC)
+2026-03-11 04:10:04 [INFO] tracker: Tracker background loop started (every 300s)
+2026-03-11 04:10:04 [INFO] bot_commands: Telegram command listener started
+2026-03-11 04:10:04 [INFO] main: Tracker + command listener started
+2026-03-11 04:10:04 [INFO] scanner: Scanner loop started  (interval 900s, need 25 candles/symbol, cooldown 168.0h)
+2026-03-11 04:10:05 [INFO] binance_client: Loaded 544 USDT perpetual symbols from exchange info
+2026-03-11 04:10:06 [INFO] scanner: Targets: 531 / 544  (2 excluded, 11 tracked, 0 on cooldown)
+2026-03-11 04:10:06 [INFO] scanner: Scanning [1/531] BTCUSDT
+2026-03-11 04:10:06 [INFO] scanner: BTCUSDT  rejected — close 69517.00000000 did not break 24h high 71748.10000000
+2026-03-11 04:10:06 [INFO] scanner: Scanning [2/531] ETHUSDT
+2026-03-11 04:10:06 [INFO] scanner: ETHUSDT  rejected — close 2020.28000000 did not break 24h high 2088.00000000
+2026-03-11 04:10:06 [INFO] scanner: Scanning [3/531] BCHUSDT
+2026-03-11 04:10:06 [INFO] scanner: BCHUSDT  rejected — close 447.45000000 did not break 24h high 452.30000000
+2026-03-11 04:10:06 [INFO] scanner: Scanning [4/531] XRPUSDT
+2026-03-11 04:10:07 [INFO] scanner: XRPUSDT  rejected — close 1.37810000 did not break 24h high 1.44220000
+2026-03-11 04:10:07 [INFO] scanner: Scanning [5/531] LTCUSDT
+2026-03-11 04:10:07 [INFO] scanner: LTCUSDT  rejected — close 53.77000000 did not break 24h high 54.97000000
+2026-03-11 04:10:07 [INFO] scanner: Scanning [6/531] ETCUSDT
+2026-03-11 04:10:07 [INFO] scanner: ETCUSDT  rejected — close 8.19900000 did not break 24h high 8.53600000
+2026-03-11 04:10:07 [INFO] scanner: Scanning [7/531] LINKUSDT
+2026-03-11 04:10:07 [INFO] scanner: LINKUSDT  rejected — close 8.92300000 did not break 24h high 9.18000000
+2026-03-11 04:10:07 [INFO] scanner: Scanning [8/531] XLMUSDT
+2026-03-11 04:10:08 [INFO] scanner: XLMUSDT  rejected — close 0.15668000 did not break 24h high 0.16781000
+2026-03-11 04:10:08 [INFO] scanner: Scanning [9/531] ADAUSDT
+2026-03-11 04:10:08 [INFO] scanner: ADAUSDT  rejected — close 0.25950000 did not break 24h high 0.27430000
+2026-03-11 04:10:08 [INFO] scanner: Scanning [10/531] XMRUSDT
+2026-03-11 04:10:08 [INFO] scanner: XMRUSDT  rejected — close 355.35000000 did not break 24h high 363.63000000
+2026-03-11 04:10:08 [INFO] scanner: Scanning [11/531] DASHUSDT
+2026-03-11 04:10:08 [INFO] scanner: DASHUSDT  rejected — close 31.94000000 did not break 24h high 33.52000000
+2026-03-11 04:10:08 [INFO] scanner: Scanning [12/531] ZECUSDT
+2026-03-11 04:10:09 [INFO] scanner: ZECUSDT  rejected — close 215.27000000 did not break 24h high 230.77000000
+2026-03-11 04:10:09 [INFO] scanner: Scanning [13/531] XTZUSDT
+2026-03-11 04:10:09 [INFO] scanner: XTZUSDT  rejected — close 0.36300000 did not break 24h high 0.37400000
+2026-03-11 04:10:09 [INFO] scanner: Scanning [14/531] BNBUSDT
+2026-03-11 04:10:09 [INFO] scanner: BNBUSDT  rejected — close 639.73000000 did not break 24h high 652.44000000
+2026-03-11 04:10:09 [INFO] scanner: Scanning [15/531] ATOMUSDT
+2026-03-11 04:10:09 [INFO] scanner: ATOMUSDT  rejected — close 1.81200000 did not break 24h high 1.84200000
+2026-03-11 04:10:09 [INFO] scanner: Scanning [16/531] ONTUSDT
+2026-03-11 04:10:09 [INFO] scanner: ONTUSDT  rejected — close 0.04020000 did not break 24h high 0.04100000
+2026-03-11 04:10:09 [INFO] scanner: Scanning [17/531] IOTAUSDT
+2026-03-11 04:10:10 [INFO] scanner: IOTAUSDT  rejected — close 0.06380000 did not break 24h high 0.06600000
+2026-03-11 04:10:10 [INFO] scanner: Scanning [18/531] BATUSDT
+2026-03-11 04:10:10 [INFO] scanner: BATUSDT  rejected — close 0.09550000 did not break 24h high 0.09870000
+2026-03-11 04:10:10 [INFO] scanner: Scanning [19/531] VETUSDT
+2026-03-11 04:10:10 [INFO] scanner: VETUSDT  rejected — close 0.00702000 did not break 24h high 0.00729100
+2026-03-11 04:10:10 [INFO] scanner: Scanning [20/531] NEOUSDT
+2026-03-11 04:10:10 [INFO] scanner: NEOUSDT  rejected — close 2.50500000 did not break 24h high 2.55800000
+2026-03-11 04:10:10 [INFO] scanner: Scanning [21/531] QTUMUSDT
+2026-03-11 04:10:11 [INFO] scanner: QTUMUSDT  rejected — close 0.87500000 did not break 24h high 0.90500000
+2026-03-11 04:10:11 [INFO] scanner: Scanning [22/531] IOSTUSDT
+2026-03-11 04:10:11 [INFO] scanner: IOSTUSDT  rejected — close 0.00115200 did not break 24h high 0.00117300
+2026-03-11 04:10:11 [INFO] scanner: Scanning [23/531] THETAUSDT
+2026-03-11 04:10:11 [INFO] scanner: THETAUSDT  rejected — close 0.18030000 did not break 24h high 0.18790000
+2026-03-11 04:10:11 [INFO] scanner: Scanning [24/531] ALGOUSDT
+2026-03-11 04:10:11 [INFO] scanner: ALGOUSDT  rejected — close 0.08500000 did not break 24h high 0.08960000
+2026-03-11 04:10:11 [INFO] scanner: Scanning [25/531] ZILUSDT
+2026-03-11 04:10:12 [INFO] scanner: ZILUSDT  rejected — close 0.00411000 did not break 24h high 0.00421000
+2026-03-11 04:10:12 [INFO] scanner: Scanning [26/531] KNCUSDT
+2026-03-11 04:10:12 [INFO] scanner: KNCUSDT  rejected — close 0.13080000 did not break 24h high 0.13240000
+2026-03-11 04:10:12 [INFO] scanner: Scanning [27/531] ZRXUSDT
+2026-03-11 04:10:12 [INFO] scanner: ZRXUSDT  rejected — close 0.10570000 did not break 24h high 0.11070000
+2026-03-11 04:10:12 [INFO] scanner: Scanning [28/531] COMPUSDT
+2026-03-11 04:10:12 [INFO] scanner: COMPUSDT  rejected — close 16.88000000 did not break 24h high 17.00000000
+2026-03-11 04:10:12 [INFO] scanner: Scanning [29/531] DOGEUSDT
+2026-03-11 04:10:13 [INFO] scanner: DOGEUSDT  rejected — close 0.09255000 did not break 24h high 0.10043000
+2026-03-11 04:10:13 [INFO] scanner: Scanning [30/531] KAVAUSDT
+2026-03-11 04:10:13 [INFO] scanner: KAVAUSDT  rejected — close 0.06530000 did not break 24h high 0.07060000
+2026-03-11 04:10:13 [INFO] scanner: Scanning [31/531] BANDUSDT
+2026-03-11 04:10:13 [INFO] scanner: BANDUSDT  rejected — close 0.21900000 did not break 24h high 0.21910000
+2026-03-11 04:10:13 [INFO] scanner: Scanning [32/531] RLCUSDT
+2026-03-11 04:10:13 [INFO] scanner: RLCUSDT  rejected — close 0.38690000 did not break 24h high 0.39910000
+2026-03-11 04:10:13 [INFO] scanner: Scanning [33/531] SNXUSDT
+2026-03-11 04:10:13 [INFO] scanner: SNXUSDT  rejected — close 0.30800000 did not break 24h high 0.32200000
+2026-03-11 04:10:13 [INFO] scanner: Scanning [34/531] DOTUSDT
+2026-03-11 04:10:14 [INFO] scanner: DOTUSDT  rejected — close 1.48300000 did not break 24h high 1.54600000
+2026-03-11 04:10:14 [INFO] scanner: Scanning [35/531] YFIUSDT
+2026-03-11 04:10:14 [INFO] scanner: YFIUSDT  rejected — close 2501.00000000 did not break 24h high 2557.00000000
+2026-03-11 04:10:14 [INFO] scanner: Scanning [36/531] CRVUSDT
+2026-03-11 04:10:14 [INFO] scanner: CRVUSDT  rejected — close 0.23700000 did not break 24h high 0.25500000
+2026-03-11 04:10:14 [INFO] scanner: Scanning [37/531] TRBUSDT
+2026-03-11 04:10:14 [INFO] scanner: TRBUSDT  rejected — close 15.30800000 did not break 24h high 15.71500000
+2026-03-11 04:10:14 [INFO] scanner: Scanning [38/531] RUNEUSDT
+2026-03-11 04:10:15 [INFO] scanner: RUNEUSDT  rejected — close 0.42500000 did not break 24h high 0.44030000
+2026-03-11 04:10:15 [INFO] scanner: Scanning [39/531] SUSHIUSDT
+2026-03-11 04:10:15 [INFO] scanner: SUSHIUSDT  rejected — close 0.19670000 did not break 24h high 0.20400000
+2026-03-11 04:10:15 [INFO] scanner: Scanning [40/531] EGLDUSDT
+2026-03-11 04:10:15 [INFO] scanner: EGLDUSDT  rejected — close 4.07500000 did not break 24h high 4.26900000
+2026-03-11 04:10:15 [INFO] scanner: Scanning [41/531] SOLUSDT
+2026-03-11 04:10:15 [INFO] scanner: SOLUSDT  rejected — close 85.56000000 did not break 24h high 88.78000000
+2026-03-11 04:10:15 [INFO] scanner: Scanning [42/531] ICXUSDT
+2026-03-11 04:10:16 [INFO] scanner: ICXUSDT  rejected — close 0.04240000 did not break 24h high 0.04270000
+2026-03-11 04:10:16 [INFO] scanner: Scanning [43/531] STORJUSDT
+2026-03-11 04:10:16 [INFO] scanner: STORJUSDT  rejected — close 0.09660000 did not break 24h high 0.09740000
+2026-03-11 04:10:16 [INFO] scanner: Scanning [44/531] UNIUSDT
+2026-03-11 04:10:16 [INFO] scanner: UNIUSDT  rejected — close 3.83200000 did not break 24h high 3.99600000
+2026-03-11 04:10:16 [INFO] scanner: Scanning [45/531] AVAXUSDT
+2026-03-11 04:10:16 [INFO] scanner: AVAXUSDT  rejected — close 9.54000000 did not break 24h high 9.95500000
+2026-03-11 04:10:16 [INFO] scanner: Scanning [46/531] ENJUSDT
+2026-03-11 04:10:17 [INFO] scanner: ENJUSDT  rejected — close 0.01777000 did not break 24h high 0.01845000
+2026-03-11 04:10:17 [INFO] scanner: Scanning [47/531] KSMUSDT
+2026-03-11 04:10:17 [INFO] scanner: KSMUSDT  rejected — close 4.51500000 did not break 24h high 4.74000000
+2026-03-11 04:10:17 [INFO] scanner: Scanning [48/531] NEARUSDT
+2026-03-11 04:10:17 [INFO] scanner: NEARUSDT  rejected — close 1.28200000 did not break 24h high 1.33200000
+2026-03-11 04:10:17 [INFO] scanner: Scanning [49/531] AAVEUSDT
+2026-03-11 04:10:17 [INFO] scanner: AAVEUSDT  rejected — close 109.82000000 did not break 24h high 114.75000000
+2026-03-11 04:10:17 [INFO] scanner: Scanning [50/531] FILUSDT
+2026-03-11 04:10:17 [INFO] scanner: FILUSDT  rejected — close 0.86200000 did not break 24h high 0.95100000
+2026-03-11 04:10:17 [INFO] scanner: Scanning [51/531] RSRUSDT
+2026-03-11 04:10:18 [INFO] scanner: RSRUSDT  rejected — close 0.00159700 did not break 24h high 0.00169700
+2026-03-11 04:10:18 [INFO] scanner: Scanning [52/531] LRCUSDT
+2026-03-11 04:10:18 [INFO] scanner: LRCUSDT  rejected — close 0.03042000 did not break 24h high 0.03143000
+2026-03-11 04:10:18 [INFO] scanner: Scanning [53/531] BELUSDT
+2026-03-11 04:10:18 [INFO] scanner: BELUSDT  rejected — close 0.09620000 did not break 24h high 0.09790000
+2026-03-11 04:10:18 [INFO] scanner: Scanning [54/531] AXSUSDT
+2026-03-11 04:10:18 [INFO] scanner: AXSUSDT  rejected — close 1.11100000 did not break 24h high 1.15500000
+2026-03-11 04:10:18 [INFO] scanner: Scanning [55/531] ZENUSDT
+2026-03-11 04:10:19 [INFO] scanner: ZENUSDT  rejected — close 5.39200000 did not break 24h high 5.60800000
+2026-03-11 04:10:19 [INFO] scanner: Scanning [56/531] SKLUSDT
+2026-03-11 04:10:19 [INFO] scanner: SKLUSDT  rejected — close 0.00659000 did not break 24h high 0.00679000
+2026-03-11 04:10:19 [INFO] scanner: Scanning [57/531] GRTUSDT
+2026-03-11 04:10:19 [INFO] scanner: GRTUSDT  rejected — close 0.02492000 did not break 24h high 0.02588000
+2026-03-11 04:10:19 [INFO] scanner: Scanning [58/531] 1INCHUSDT
+2026-03-11 04:10:19 [INFO] scanner: 1INCHUSDT  rejected — close 0.09370000 did not break 24h high 0.09680000
+2026-03-11 04:10:19 [INFO] scanner: Scanning [59/531] CHZUSDT
+2026-03-11 04:10:20 [INFO] scanner: CHZUSDT  rejected — close 0.03769000 did not break 24h high 0.04109000
+2026-03-11 04:10:20 [INFO] scanner: Scanning [60/531] SANDUSDT
+2026-03-11 04:10:20 [INFO] scanner: SANDUSDT  rejected — close 0.08083000 did not break 24h high 0.08439000
+2026-03-11 04:10:20 [INFO] scanner: Scanning [61/531] RVNUSDT
+2026-03-11 04:10:20 [INFO] scanner: RVNUSDT  rejected — close 0.00542000 did not break 24h high 0.00558000
+2026-03-11 04:10:20 [INFO] scanner: Scanning [62/531] SFPUSDT
+2026-03-11 04:10:20 [INFO] scanner: SFPUSDT  rejected — close 0.27080000 did not break 24h high 0.27090000
+2026-03-11 04:10:20 [INFO] scanner: Scanning [63/531] COTIUSDT
+2026-03-11 04:10:21 [INFO] scanner: COTIUSDT  rejected — close 0.01189000 did not break 24h high 0.01217000
+2026-03-11 04:10:21 [INFO] scanner: Scanning [64/531] CHRUSDT
+2026-03-11 04:10:21 [INFO] scanner: CHRUSDT  rejected — close 0.01550000 did not break 24h high 0.01610000
+2026-03-11 04:10:21 [INFO] scanner: Scanning [65/531] MANAUSDT
+2026-03-11 04:10:21 [INFO] scanner: MANAUSDT  rejected — close 0.09000000 did not break 24h high 0.09430000
+2026-03-11 04:10:21 [INFO] scanner: Scanning [66/531] ALICEUSDT
+2026-03-11 04:10:21 [INFO] scanner: ALICEUSDT  rejected — close 0.12100000 did not break 24h high 0.12500000
+2026-03-11 04:10:21 [INFO] scanner: Scanning [67/531] HBARUSDT
+2026-03-11 04:10:21 [INFO] scanner: HBARUSDT  rejected — close 0.09431000 did not break 24h high 0.09890000
+2026-03-11 04:10:21 [INFO] scanner: Scanning [68/531] ONEUSDT
+2026-03-11 04:10:22 [INFO] scanner: ONEUSDT  rejected — close 0.00235000 did not break 24h high 0.00258000
+2026-03-11 04:10:22 [INFO] scanner: Scanning [69/531] DENTUSDT
+2026-03-11 04:10:22 [INFO] scanner: DENTUSDT  rejected — close 0.00022500 did not break 24h high 0.00027000
+2026-03-11 04:10:22 [INFO] scanner: Scanning [70/531] CELRUSDT
+2026-03-11 04:10:22 [INFO] scanner: CELRUSDT  rejected — close 0.00260000 did not break 24h high 0.00269000
+2026-03-11 04:10:22 [INFO] scanner: Scanning [71/531] HOTUSDT
+2026-03-11 04:10:22 [INFO] scanner: HOTUSDT  rejected — close 0.00040500 did not break 24h high 0.00041900
+2026-03-11 04:10:22 [INFO] scanner: Scanning [72/531] MTLUSDT
+2026-03-11 04:10:23 [INFO] scanner: MTLUSDT  rejected — close 0.27060000 did not break 24h high 0.27370000
+2026-03-11 04:10:23 [INFO] scanner: Scanning [73/531] OGNUSDT
+2026-03-11 04:10:23 [INFO] scanner: OGNUSDT  rejected — close 0.01880000 did not break 24h high 0.01940000
+2026-03-11 04:10:23 [INFO] scanner: Scanning [74/531] 1000SHIBUSDT
+2026-03-11 04:10:23 [INFO] scanner: 1000SHIBUSDT  rejected — close 0.00560500 did not break 24h high 0.00607400
+2026-03-11 04:10:23 [INFO] scanner: Scanning [75/531] GTCUSDT
+2026-03-11 04:10:23 [INFO] scanner: GTCUSDT  rejected — close 0.08500000 did not break 24h high 0.08500000
+2026-03-11 04:10:23 [INFO] scanner: Scanning [76/531] IOTXUSDT
+2026-03-11 04:10:24 [INFO] scanner: IOTXUSDT  rejected — close 0.00509000 did not break 24h high 0.00539000
+2026-03-11 04:10:24 [INFO] scanner: Scanning [77/531] C98USDT
+2026-03-11 04:10:24 [INFO] scanner: C98USDT  rejected — close 0.02470000 did not break 24h high 0.02560000
+2026-03-11 04:10:24 [INFO] scanner: Scanning [78/531] MASKUSDT
+2026-03-11 04:10:24 [INFO] scanner: MASKUSDT  rejected — close 0.43950000 did not break 24h high 0.46020000
+2026-03-11 04:10:24 [INFO] scanner: Scanning [79/531] ATAUSDT
+2026-03-11 04:10:24 [INFO] scanner: ATAUSDT  rejected — close 0.01130000 did not break 24h high 0.01130000
+2026-03-11 04:10:24 [INFO] scanner: Scanning [80/531] DYDXUSDT
+2026-03-11 04:10:25 [INFO] scanner: DYDXUSDT  rejected — close 0.08500000 did not break 24h high 0.08900000
+2026-03-11 04:10:25 [INFO] scanner: Scanning [81/531] 1000XECUSDT
+2026-03-11 04:10:25 [INFO] scanner: 1000XECUSDT  rejected — close 0.00699000 did not break 24h high 0.00734000
+2026-03-11 04:10:25 [INFO] scanner: Scanning [82/531] GALAUSDT
+2026-03-11 04:10:25 [INFO] scanner: GALAUSDT  rejected — close 0.00334000 did not break 24h high 0.00351000
+2026-03-11 04:10:25 [INFO] scanner: Scanning [83/531] CELOUSDT
+2026-03-11 04:10:25 [INFO] scanner: CELOUSDT  rejected — close 0.07300000 did not break 24h high 0.07600000
+2026-03-11 04:10:25 [INFO] scanner: Scanning [84/531] ARUSDT
+2026-03-11 04:10:25 [INFO] scanner: ARUSDT  rejected — close 1.63000000 did not break 24h high 1.70200000
+2026-03-11 04:10:25 [INFO] scanner: Scanning [85/531] ARPAUSDT
+2026-03-11 04:10:26 [INFO] scanner: ARPAUSDT  rejected — close 0.00985000 did not break 24h high 0.01004000
+2026-03-11 04:10:26 [INFO] scanner: Scanning [86/531] CTSIUSDT
+2026-03-11 04:10:26 [INFO] scanner: CTSIUSDT  rejected — close 0.02450000 did not break 24h high 0.02760000
+2026-03-11 04:10:26 [INFO] scanner: Scanning [87/531] LPTUSDT
+2026-03-11 04:10:26 [INFO] scanner: LPTUSDT  rejected — close 2.24600000 did not break 24h high 2.33000000
+2026-03-11 04:10:26 [INFO] scanner: Scanning [88/531] ENSUSDT
+2026-03-11 04:10:26 [INFO] scanner: ENSUSDT  rejected — close 5.92700000 did not break 24h high 6.13200000
+2026-03-11 04:10:26 [INFO] scanner: Scanning [89/531] PEOPLEUSDT
+2026-03-11 04:10:27 [INFO] scanner: PEOPLEUSDT  rejected — close 0.00764000 did not break 24h high 0.00829000
+2026-03-11 04:10:27 [INFO] scanner: Scanning [90/531] ROSEUSDT
+2026-03-11 04:10:27 [INFO] scanner: ROSEUSDT  rejected — close 0.01178000 did not break 24h high 0.01253000
+2026-03-11 04:10:27 [INFO] scanner: Scanning [91/531] DUSKUSDT
+2026-03-11 04:10:27 [INFO] scanner: DUSKUSDT  rejected — close 0.08651000 did not break 24h high 0.09258000
+2026-03-11 04:10:27 [INFO] scanner: Scanning [92/531] FLOWUSDT
+2026-03-11 04:10:27 [INFO] scanner: FLOWUSDT  rejected — close 0.06057000 did not break 24h high 0.07450000
+2026-03-11 04:10:27 [INFO] scanner: Scanning [93/531] IMXUSDT
+2026-03-11 04:10:28 [INFO] scanner: IMXUSDT  rejected — close 0.15730000 did not break 24h high 0.16390000
+2026-03-11 04:10:28 [INFO] scanner: Scanning [94/531] API3USDT
+2026-03-11 04:10:28 [INFO] scanner: API3USDT  rejected — close 0.28130000 did not break 24h high 0.28490000
+2026-03-11 04:10:28 [INFO] scanner: Scanning [95/531] GMTUSDT
+2026-03-11 04:10:28 [INFO] scanner: GMTUSDT  rejected — close 0.01090000 did not break 24h high 0.01115000
+2026-03-11 04:10:28 [INFO] scanner: Scanning [96/531] APEUSDT
+2026-03-11 04:10:28 [INFO] scanner: APEUSDT  rejected — close 0.09440000 did not break 24h high 0.09780000
+2026-03-11 04:10:28 [INFO] scanner: Scanning [97/531] WOOUSDT
+2026-03-11 04:10:29 [INFO] scanner: WOOUSDT  rejected — close 0.01760000 did not break 24h high 0.01837000
+2026-03-11 04:10:29 [INFO] scanner: Scanning [98/531] JASMYUSDT
+2026-03-11 04:10:29 [INFO] scanner: JASMYUSDT  rejected — close 0.00568500 did not break 24h high 0.00596200
+2026-03-11 04:10:29 [INFO] scanner: Scanning [99/531] OPUSDT
+2026-03-11 04:10:29 [INFO] scanner: OPUSDT  rejected — close 0.11850000 did not break 24h high 0.12350000
+2026-03-11 04:10:29 [INFO] scanner: Scanning [100/531] INJUSDT
+2026-03-11 04:10:29 [INFO] scanner: INJUSDT  rejected — close 2.92400000 did not break 24h high 3.02800000
+2026-03-11 04:10:29 [INFO] scanner: Scanning [101/531] STGUSDT
+2026-03-11 04:10:29 [INFO] scanner: STGUSDT  rejected — close 0.18480000 did not break 24h high 0.19190000
+2026-03-11 04:10:29 [INFO] scanner: Scanning [102/531] SPELLUSDT
+2026-03-11 04:10:30 [INFO] scanner: SPELLUSDT  rejected — close 0.00017130 did not break 24h high 0.00017500
+2026-03-11 04:10:30 [INFO] scanner: Scanning [103/531] 1000LUNCUSDT
+2026-03-11 04:10:30 [INFO] scanner: 1000LUNCUSDT  rejected — close 0.04246000 did not break 24h high 0.04269000
+2026-03-11 04:10:30 [INFO] scanner: Scanning [104/531] LUNA2USDT
+2026-03-11 04:10:30 [INFO] scanner: LUNA2USDT  rejected — close 0.06350000 did not break 24h high 0.06357000
+2026-03-11 04:10:30 [INFO] scanner: Scanning [105/531] LDOUSDT
+2026-03-11 04:10:30 [INFO] scanner: LDOUSDT  rejected — close 0.29100000 did not break 24h high 0.29610000
+2026-03-11 04:10:30 [INFO] scanner: Scanning [106/531] ICPUSDT
+2026-03-11 04:10:31 [INFO] scanner: ICPUSDT  rejected — close 2.38900000 did not break 24h high 2.54800000
+2026-03-11 04:10:31 [INFO] scanner: Scanning [107/531] APTUSDT
+2026-03-11 04:10:31 [INFO] scanner: APTUSDT  rejected — close 0.94600000 did not break 24h high 0.99940000
+2026-03-11 04:10:31 [INFO] scanner: Scanning [108/531] QNTUSDT
+2026-03-11 04:10:31 [INFO] scanner: QNTUSDT  rejected — close 62.45000000 did not break 24h high 64.27000000
+2026-03-11 04:10:31 [INFO] scanner: Scanning [109/531] FETUSDT
+2026-03-11 04:10:31 [INFO] scanner: FETUSDT  rejected — close 0.15380000 did not break 24h high 0.15700000
+2026-03-11 04:10:31 [INFO] scanner: Scanning [110/531] HOOKUSDT
+2026-03-11 04:10:32 [INFO] scanner: HOOKUSDT  rejected — close 0.02006000 did not break 24h high 0.02114000
+2026-03-11 04:10:32 [INFO] scanner: Scanning [111/531] MAGICUSDT
+2026-03-11 04:10:32 [INFO] scanner: MAGICUSDT  rejected — close 0.06400000 did not break 24h high 0.06859000
+2026-03-11 04:10:32 [INFO] scanner: Scanning [112/531] TUSDT
+2026-03-11 04:10:32 [INFO] scanner: TUSDT  ✅ Breakout +0.13% above 24h high 0.00687600
+2026-03-11 04:10:32 [INFO] scanner: TUSDT  rejected — volume NOT consecutively increasing: $252K → $227K → $593K
+2026-03-11 04:10:32 [INFO] scanner: Scanning [113/531] HIGHUSDT
+2026-03-11 04:10:32 [INFO] scanner: HIGHUSDT  rejected — close 0.13530000 did not break 24h high 0.13880000
+2026-03-11 04:10:32 [INFO] scanner: Scanning [114/531] MINAUSDT
+2026-03-11 04:10:32 [INFO] scanner: MINAUSDT  rejected — close 0.05438000 did not break 24h high 0.05585000
+2026-03-11 04:10:32 [INFO] scanner: Scanning [115/531] ASTRUSDT
+2026-03-11 04:10:33 [INFO] scanner: ASTRUSDT  rejected — close 0.00735500 did not break 24h high 0.00784400
+2026-03-11 04:10:33 [INFO] scanner: Scanning [116/531] PHBUSDT
+2026-03-11 04:10:33 [INFO] scanner: PHBUSDT  rejected — close 0.14980000 did not break 24h high 0.15570000
+2026-03-11 04:10:33 [INFO] scanner: Scanning [117/531] GMXUSDT
+2026-03-11 04:10:33 [INFO] scanner: GMXUSDT  rejected — close 6.45800000 did not break 24h high 6.83500000
+2026-03-11 04:10:33 [INFO] scanner: Scanning [118/531] CFXUSDT
+2026-03-11 04:10:33 [INFO] scanner: CFXUSDT  rejected — close 0.04995000 did not break 24h high 0.05149000
+2026-03-11 04:10:33 [INFO] scanner: Scanning [119/531] STXUSDT
+2026-03-11 04:10:34 [INFO] scanner: STXUSDT  rejected — close 0.25710000 did not break 24h high 0.27390000
+2026-03-11 04:10:34 [INFO] scanner: Scanning [120/531] ACHUSDT
+2026-03-11 04:10:34 [INFO] scanner: ACHUSDT  rejected — close 0.00677200 did not break 24h high 0.00701800
+2026-03-11 04:10:34 [INFO] scanner: Scanning [121/531] SSVUSDT
+2026-03-11 04:10:34 [INFO] scanner: SSVUSDT  rejected — close 2.62600000 did not break 24h high 2.72800000
+2026-03-11 04:10:34 [INFO] scanner: Scanning [122/531] CKBUSDT
+2026-03-11 04:10:34 [INFO] scanner: CKBUSDT  rejected — close 0.00150200 did not break 24h high 0.00153900
+2026-03-11 04:10:34 [INFO] scanner: Scanning [123/531] TRUUSDT
+2026-03-11 04:10:35 [INFO] scanner: TRUUSDT  rejected — close 0.00502700 did not break 24h high 0.00522300
+2026-03-11 04:10:35 [INFO] scanner: Scanning [124/531] LQTYUSDT
+2026-03-11 04:10:35 [INFO] scanner: LQTYUSDT  rejected — close 0.28320000 did not break 24h high 0.29650000
+2026-03-11 04:10:35 [INFO] scanner: Scanning [125/531] IDUSDT
+2026-03-11 04:10:35 [INFO] scanner: IDUSDT  rejected — close 0.04109000 did not break 24h high 0.04181000
+2026-03-11 04:10:35 [INFO] scanner: Scanning [126/531] ARBUSDT
+2026-03-11 04:10:35 [INFO] scanner: ARBUSDT  rejected — close 0.09800000 did not break 24h high 0.10220000
+2026-03-11 04:10:35 [INFO] scanner: Scanning [127/531] TLMUSDT
+2026-03-11 04:10:36 [INFO] scanner: TLMUSDT  rejected — close 0.00171800 did not break 24h high 0.00184000
+2026-03-11 04:10:36 [INFO] scanner: Scanning [128/531] RDNTUSDT
+2026-03-11 04:10:36 [INFO] scanner: RDNTUSDT  rejected — close 0.00533600 did not break 24h high 0.00547600
+2026-03-11 04:10:36 [INFO] scanner: Scanning [129/531] HFTUSDT
+2026-03-11 04:10:36 [INFO] scanner: HFTUSDT  rejected — close 0.01441000 did not break 24h high 0.01564000
+2026-03-11 04:10:36 [INFO] scanner: Scanning [130/531] XVSUSDT
+2026-03-11 04:10:36 [INFO] scanner: XVSUSDT  rejected — close 2.88000000 did not break 24h high 2.99200000
+2026-03-11 04:10:36 [INFO] scanner: Scanning [131/531] BLURUSDT
+2026-03-11 04:10:36 [INFO] scanner: BLURUSDT  rejected — close 0.01907000 did not break 24h high 0.01958000
+2026-03-11 04:10:36 [INFO] scanner: Scanning [132/531] EDUUSDT
+2026-03-11 04:10:37 [INFO] scanner: EDUUSDT  rejected — close 0.09720000 did not break 24h high 0.10140000
+2026-03-11 04:10:37 [INFO] scanner: Scanning [133/531] SUIUSDT
+2026-03-11 04:10:37 [INFO] scanner: SUIUSDT  rejected — close 0.94930000 did not break 24h high 1.01020000
+2026-03-11 04:10:37 [INFO] scanner: Scanning [134/531] 1000PEPEUSDT
+2026-03-11 04:10:37 [INFO] scanner: 1000PEPEUSDT  rejected — close 0.00328690 did not break 24h high 0.00352670
+2026-03-11 04:10:37 [INFO] scanner: Scanning [135/531] 1000FLOKIUSDT
+2026-03-11 04:10:37 [INFO] scanner: 1000FLOKIUSDT  rejected — close 0.02880000 did not break 24h high 0.03075000
+2026-03-11 04:10:37 [INFO] scanner: Scanning [136/531] UMAUSDT
+2026-03-11 04:10:38 [INFO] scanner: UMAUSDT  rejected — close 0.40720000 did not break 24h high 0.43050000
+2026-03-11 04:10:38 [INFO] scanner: Scanning [137/531] NMRUSDT
+2026-03-11 04:10:38 [INFO] scanner: NMRUSDT  rejected — close 7.51000000 did not break 24h high 7.76200000
+2026-03-11 04:10:38 [INFO] scanner: Scanning [138/531] MAVUSDT

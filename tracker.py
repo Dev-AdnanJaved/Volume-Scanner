@@ -337,9 +337,9 @@ class SignalTracker:
             if not pending:
                 self._last_report_file.write_text(today_str, encoding="utf-8")
                 return
-            self._save(self._pending_file, [])
 
         tmp_path = self._data_dir / f"report_{today_str}.json"
+        sent = False
         try:
             with open(tmp_path, "w", encoding="utf-8") as fh:
                 json.dump(pending, fh, indent=2)
@@ -349,8 +349,11 @@ class SignalTracker:
                 f"Daily 7-day report — {count} signal{'s' if count != 1 else ''} completed\n"
                 f"{symbols}"
             )
-            self._notifier.send_document(str(tmp_path), caption=caption)
-            logger.info("Sent daily report for %d signal(s): %s", count, symbols)
+            sent = self._notifier.send_document(str(tmp_path), caption=caption)
+            if sent:
+                logger.info("Sent daily report for %d signal(s): %s", count, symbols)
+            else:
+                logger.error("Failed to send daily report — will retry next cycle")
         except Exception as exc:
             logger.error("Failed to send daily report: %s", exc)
         finally:
@@ -359,10 +362,13 @@ class SignalTracker:
             except OSError:
                 pass
 
-        try:
-            self._last_report_file.write_text(today_str, encoding="utf-8")
-        except IOError as exc:
-            logger.error("Failed to save last_report_date: %s", exc)
+        if sent:
+            with self._lock:
+                self._save(self._pending_file, [])
+            try:
+                self._last_report_file.write_text(today_str, encoding="utf-8")
+            except IOError as exc:
+                logger.error("Failed to save last_report_date: %s", exc)
 
     # ── data access ──────────────────────────────────────────────────
 
@@ -371,6 +377,11 @@ class SignalTracker:
         with self._lock:
             signals = self._load(self._signals_file)
         return [s for s in signals if now - s["alert_time_ts"] < self._max_age]
+
+    def get_tracked_symbols(self) -> Set[str]:
+        with self._lock:
+            signals = self._load(self._signals_file)
+        return {s["symbol"] for s in signals}
 
     def get_history(self) -> List[dict]:
         with self._lock:

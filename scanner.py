@@ -165,16 +165,24 @@ class Scanner:
             logger.warning("24h ticker fetch failed: %s", exc)
             self._tickers = {}
 
+        already_tracked: set = set()
+        if self._tracker:
+            try:
+                already_tracked = self._tracker.get_tracked_symbols()
+            except Exception:
+                pass
+
         targets = [
             s for s in all_syms
             if s["symbol"] not in self.excluded
+            and s["symbol"] not in already_tracked
             and not self._cooldown.is_on_cooldown(s["symbol"])
         ]
 
         logger.info(
-            "Targets: %d / %d  (%d excluded, %d on cooldown)",
+            "Targets: %d / %d  (%d excluded, %d tracked, %d on cooldown)",
             len(targets), len(all_syms),
-            len(self.excluded), self._cooldown.active_count,
+            len(self.excluded), len(already_tracked), self._cooldown.active_count,
         )
 
         alerts = 0
