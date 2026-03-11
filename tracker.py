@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import time
 import threading
 from datetime import datetime, timezone
@@ -258,6 +259,7 @@ class SignalTracker:
 
             active = []
             archived = 0
+            newly_archived = []
 
             for sig in signals:
                 age = now - sig["alert_time_ts"]
@@ -278,6 +280,7 @@ class SignalTracker:
                         sig["exit_price"] = current
                         sig["highest_pct"] = sig["peak_pct"]
                     history.append(sig)
+                    newly_archived.append(sig)
                     archived += 1
                 else:
                     active.append(sig)
@@ -286,7 +289,32 @@ class SignalTracker:
                 self._save(self._signals_file, active)
                 self._save(self._history_file, history)
 
+        if archived > 0:
+            self._send_expired_report(newly_archived)
+
         return archived
+
+    def _send_expired_report(self, signals: list) -> None:
+        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        tmp_path = self._data_dir / f"report_{now_str}_{int(time.time())}.json"
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as fh:
+                json.dump(signals, fh, indent=2)
+            count = len(signals)
+            symbols = ", ".join(s["symbol"] for s in signals)
+            caption = (
+                f"7-day report — {count} signal{'s' if count != 1 else ''} completed\n"
+                f"{symbols}"
+            )
+            self._notifier.send_document(str(tmp_path), caption=caption)
+            logger.info("Sent 7-day report for %d signal(s): %s", count, symbols)
+        except Exception as exc:
+            logger.error("Failed to send expired report: %s", exc)
+        finally:
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
 
     # ── data access ──────────────────────────────────────────────────
 
