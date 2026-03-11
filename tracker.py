@@ -2,8 +2,8 @@
 Signal performance tracker with take-profit alerts.
 
 Responsibilities:
-  - Store every alert to disk with full enrichment
-  - Continuously track highest price
+  - Store every alert to disk with full enrichment (including additional_data)
+  - Continuously track highest price AND lowest price since entry
   - Send take-profit target alerts when price hits configurable levels
   - Send reversal warnings when price drops significantly from peak
   - Archive signals after configurable max age
@@ -34,17 +34,17 @@ class SignalTracker:
         notifier: TelegramNotifier,
     ) -> None:
         tc = config.get("tracker", {})
-        self._max_age = tc.get("max_age_hours", 72) * 3600
+        self._max_age = tc.get("max_age_hours", 168) * 3600
         self._update_interval = tc.get("price_update_interval_seconds", 300)
         self._data_dir = Path(tc.get("data_dir", "data"))
         self._signals_file = self._data_dir / "signals.json"
         self._history_file = self._data_dir / "history.json"
 
-        # take-profit settings
-        self._tp_targets: List[int] = sorted(tc.get("take_profit_targets", [3, 5, 10, 15, 20]))
+        self._tp_targets: List[int] = sorted(tc.get("take_profit_targets", [5, 10, 15, 20]))
         self._reversal_enabled: bool = tc.get("reversal_alert_enabled", True)
         self._min_reversal_peak: float = tc.get("min_reversal_peak_pct", 3.0)
         self._reversal_drop: float = tc.get("reversal_drop_from_peak_pct", 5.0)
+        self._detailed_min_age: float = tc.get("detailed_report_min_age_hours", 168) * 3600
 
         self._binance = binance
         self._notifier = notifier
@@ -80,8 +80,6 @@ class SignalTracker:
         except IOError as exc:
             logger.error("Failed to write %s: %s", path, exc)
 
-    # ── age formatting ───────────────────────────────────────────────
-
     @staticmethod
     def _fmt_age(ts: float) -> str:
         age = time.time() - ts
@@ -103,29 +101,24 @@ class SignalTracker:
             "symbol":              alert["symbol"],
             "entry_price":         price,
             "highest_price":       price,
+            "lowest_price":        price,
             "current_price":       price,
             "alert_time_ts":       time.time(),
             "alert_time":          datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
             "timeframe":           alert.get("timeframe", "1h"),
-            "mcap":                alert.get("mcap", "Unknown"),
-            "vol_ratio":           alert.get("vol_ratio", 0),
-            "recent_vol_usdt":     alert.get("recent_vol_usdt", 0),
-            "baseline_vol_usdt":   alert.get("baseline_vol_usdt", 0),
-            "recent_vol_fmt":      alert.get("recent_vol_fmt", "N/A"),
-            "baseline_vol_fmt":    alert.get("baseline_vol_fmt", "N/A"),
-            "candle_color":        alert.get("candle_color", "N/A"),
-            "body_pct":            alert.get("body_pct", 0),
-            "upper_wick_pct":      alert.get("upper_wick_pct", 0),
-            "lower_wick_pct":      alert.get("lower_wick_pct", 0),
-            "breakout_confirmed":  alert.get("breakout_confirmed"),
-            "breakout_level":      alert.get("breakout_level"),
+            "price_change_24h":    alert.get("price_change_24h", 0),
             "breakout_margin_pct": alert.get("breakout_margin_pct"),
-            "oi_pct":              alert.get("oi_pct"),
-            "trend_green":         alert.get("trend_green", 0),
-            "trend_total":         alert.get("trend_total", 0),
-            "trend_pattern":       alert.get("trend_pattern", ""),
+            "high_24h":            alert.get("high_24h"),
+            "vol_candle_1":        alert.get("vol_candle_1"),
+            "vol_candle_2":        alert.get("vol_candle_2"),
+            "vol_candle_3":        alert.get("vol_candle_3"),
+            "vol_candle_1_fmt":    alert.get("vol_candle_1_fmt"),
+            "vol_candle_2_fmt":    alert.get("vol_candle_2_fmt"),
+            "vol_candle_3_fmt":    alert.get("vol_candle_3_fmt"),
+            "rvol":                alert.get("rvol"),
             "btc_price":           alert.get("btc_price"),
-            # take-profit tracking
+            "candle_time":         alert.get("candle_time"),
+            "additional_data":     alert.get("additional_data", {}),
             "tp_sent":             [],
             "reversal_warned":     False,
         }
@@ -155,6 +148,9 @@ class SignalTracker:
                 sig["last_update_ts"] = now
                 if current > sig.get("highest_price", 0):
                     sig["highest_price"] = current
+                lowest = sig.get("lowest_price", current)
+                if lowest == 0 or current < lowest:
+                    sig["lowest_price"] = current
                 changed = True
             if changed:
                 self._save(self._signals_file, signals)
@@ -169,7 +165,6 @@ class SignalTracker:
     # ── take-profit checking ─────────────────────────────────────────
 
     def _check_take_profits(self) -> None:
-        """Check all active signals for TP targets and reversal conditions."""
         with self._lock:
             signals = self._load(self._signals_file)
             if not signals:
@@ -189,10 +184,8 @@ class SignalTracker:
                 cur_pct = ((current - entry) / entry) * 100
                 age_str = self._fmt_age(sig["alert_time_ts"])
 
-                # ensure tp_sent exists (backwards compat)
                 tp_sent: list = sig.get("tp_sent", [])
 
-                # ── check each TP target ─────────────────────────────
                 for target in self._tp_targets:
                     if target in tp_sent:
                         continue
@@ -217,7 +210,6 @@ class SignalTracker:
 
                 sig["tp_sent"] = tp_sent
 
-                # ── check reversal warning ───────────────────────────
                 if (
                     self._reversal_enabled
                     and not sig.get("reversal_warned", False)
@@ -246,7 +238,6 @@ class SignalTracker:
             if changed:
                 self._save(self._signals_file, signals)
 
-        # send alerts outside the lock
         for alert in alerts_to_send:
             try:
                 if alert["type"] == "take_profit":
@@ -273,6 +264,7 @@ class SignalTracker:
                 if age >= self._max_age:
                     entry = sig.get("entry_price", 0)
                     highest = sig.get("highest_price", 0)
+                    lowest = sig.get("lowest_price", 0)
                     current = sig.get("current_price", 0)
                     sig["archived_time_ts"] = now
                     sig["archived_time"] = datetime.now(timezone.utc).strftime(
@@ -280,9 +272,11 @@ class SignalTracker:
                     )
                     sig["tracked_hours"] = round(age / 3600, 1)
                     if entry > 0:
-                        sig["highest_pct"] = round(((highest - entry) / entry) * 100, 2)
+                        sig["peak_pct"] = round(((highest - entry) / entry) * 100, 2)
+                        sig["lowest_pct"] = round(((lowest - entry) / entry) * 100, 2) if lowest > 0 else None
                         sig["exit_pct"] = round(((current - entry) / entry) * 100, 2)
                         sig["exit_price"] = current
+                        sig["highest_pct"] = sig["peak_pct"]
                     history.append(sig)
                     archived += 1
                 else:
@@ -306,9 +300,22 @@ class SignalTracker:
         with self._lock:
             return self._load(self._history_file)
 
+    def get_completed_signals(self, min_age_seconds: float) -> List[dict]:
+        """Return archived signals that have been tracked for at least min_age_seconds."""
+        now = time.time()
+        history = self.get_history()
+        return [
+            h for h in history
+            if (now - h.get("alert_time_ts", now)) >= min_age_seconds
+        ]
+
     @property
     def max_age_hours(self) -> int:
         return int(self._max_age // 3600)
+
+    @property
+    def detailed_report_min_age_seconds(self) -> float:
+        return self._detailed_min_age
 
     # ── background loop ──────────────────────────────────────────────
 

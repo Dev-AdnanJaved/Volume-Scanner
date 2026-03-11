@@ -30,10 +30,8 @@ class BinanceClient:
     """Thin wrapper around the Binance Futures (fapi) REST API."""
 
     BASE = "https://fapi.binance.com"
-    MAX_WEIGHT_PER_MIN = 2400          # documented limit
-    SAFE_WEIGHT_CEILING = 2000         # leave headroom
-
-    # ── construction ─────────────────────────────────────────────────
+    MAX_WEIGHT_PER_MIN = 2400
+    SAFE_WEIGHT_CEILING = 2000
 
     def __init__(
         self,
@@ -52,20 +50,15 @@ class BinanceClient:
             self._session.proxies = {"http": proxy_url, "https": proxy_url}
             logger.info("Proxy configured: %s", proxy_url)
 
-        # weight-based rate-limit bookkeeping
-        self._weights: deque[tuple[float, int]] = deque()   # (timestamp, weight)
+        self._weights: deque[tuple[float, int]] = deque()
         self._lock = Lock()
 
-        # exchange-info cache
         self._symbols: Optional[List[Dict]] = None
         self._symbols_ts: float = 0.0
-
-    # ── internal request machinery ───────────────────────────────────
 
     def _consume_weight(self, weight: int = 1) -> None:
         with self._lock:
             now = time.time()
-            # drop entries older than 60 s
             while self._weights and now - self._weights[0][0] > 60:
                 self._weights.popleft()
             used = sum(w for _, w in self._weights)
@@ -121,8 +114,6 @@ class BinanceClient:
                 time.sleep(2 ** attempt)
         raise RuntimeError(f"Failed {path} after {retries} attempts")
 
-    # ── public helpers ───────────────────────────────────────────────
-
     def get_usdt_perpetual_symbols(self, ttl: float = 300) -> List[Dict]:
         """Return list of active USDT perpetual pairs (cached)."""
         now = time.time()
@@ -160,9 +151,6 @@ class BinanceClient:
     def get_closed_klines(self, symbol: str, interval: str, count: int) -> List[Dict]:
         """
         Return exactly *count* **closed** candles (newest last).
-
-        We fetch count+2 rows so we can safely drop the current
-        still-open candle and still have enough history.
         """
         raw = self._get(
             "/fapi/v1/klines",
@@ -172,7 +160,7 @@ class BinanceClient:
         now_ms = int(time.time() * 1000)
         closed: list[dict] = []
         for row in raw:
-            if int(row[6]) > now_ms:          # close_time in the future → unclosed
+            if int(row[6]) > now_ms:
                 continue
             closed.append(
                 {
@@ -187,7 +175,7 @@ class BinanceClient:
                     "trades":        int(row[8]),
                 }
             )
-        return closed[-count:]                # trim to exactly what was asked
+        return closed[-count:]
 
     def get_24h_tickers(self) -> Dict[str, dict]:
         """Fetch 24h ticker stats for all USDT futures symbols in one call."""
@@ -197,13 +185,13 @@ class BinanceClient:
             result[d["symbol"]] = {
                 "price_change_pct": float(d.get("priceChangePercent", 0)),
                 "quote_volume_24h": float(d.get("quoteVolume", 0)),
+                "high_price":       float(d.get("highPrice", 0)),
             }
         return result
 
     def get_oi_history(self, symbol: str, period: str, limit: int) -> List[Dict]:
         """
         Historical open interest (from /futures/data/ endpoint).
-
         Returns [] on failure so callers can degrade gracefully.
         """
         try:
@@ -223,3 +211,21 @@ class BinanceClient:
         except Exception as exc:
             logger.warning("OI history unavailable for %s: %s", symbol, exc)
             return []
+
+    def get_funding_rate(self, symbol: str) -> Optional[float]:
+        """
+        Fetch current funding rate for a symbol.
+        Returns None on failure.
+        """
+        try:
+            data = self._get(
+                "/fapi/v1/premiumIndex",
+                params={"symbol": symbol},
+                weight=1,
+            )
+            if isinstance(data, list):
+                data = data[0]
+            return float(data["lastFundingRate"])
+        except Exception as exc:
+            logger.debug("Funding rate unavailable for %s: %s", symbol, exc)
+            return None
