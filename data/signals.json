@@ -2,9 +2,9 @@
   {
     "symbol": "TRXUSDT",
     "entry_price": 0.28668265,
-    "highest_price": 0.28674657,
+    "highest_price": 0.28835,
     "lowest_price": 0.28668265,
-    "current_price": 0.28674657,
+    "current_price": 0.28835,
     "alert_time_ts": 1773203855.619884,
     "alert_time": "2026-03-11 04:37:35 UTC",
     "timeframe": "1h",
@@ -43,14 +43,14 @@
     },
     "tp_sent": [],
     "reversal_warned": false,
-    "last_update_ts": 1773204153.457635
+    "last_update_ts": 1773225988.1698124
   },
   {
     "symbol": "ANKRUSDT",
     "entry_price": 0.00443454,
-    "highest_price": 0.004439,
-    "lowest_price": 0.00443454,
-    "current_price": 0.004439,
+    "highest_price": 0.00444472,
+    "lowest_price": 0.004361,
+    "current_price": 0.004361,
     "alert_time_ts": 1773203870.4795427,
     "alert_time": "2026-03-11 04:37:50 UTC",
     "timeframe": "1h",
@@ -89,14 +89,14 @@
     },
     "tp_sent": [],
     "reversal_warned": false,
-    "last_update_ts": 1773204153.457635
+    "last_update_ts": 1773225988.1698124
   },
   {
     "symbol": "JOEUSDT",
     "entry_price": 0.04396475,
-    "highest_price": 0.04438162,
-    "lowest_price": 0.04396475,
-    "current_price": 0.04438162,
+    "highest_price": 0.04461444,
+    "lowest_price": 0.04120596,
+    "current_price": 0.04120596,
     "alert_time_ts": 1773203887.6205509,
     "alert_time": "2026-03-11 04:38:07 UTC",
     "timeframe": "1h",
@@ -135,14 +135,14 @@
     },
     "tp_sent": [],
     "reversal_warned": false,
-    "last_update_ts": 1773204153.457635
+    "last_update_ts": 1773225988.1698124
   },
   {
     "symbol": "ONGUSDT",
     "entry_price": 0.06625227,
     "highest_price": 0.06625227,
-    "lowest_price": 0.0658,
-    "current_price": 0.0658,
+    "lowest_price": 0.06106585,
+    "current_price": 0.06106585,
     "alert_time_ts": 1773203899.8840442,
     "alert_time": "2026-03-11 04:38:19 UTC",
     "timeframe": "1h",
@@ -181,14 +181,14 @@
     },
     "tp_sent": [],
     "reversal_warned": false,
-    "last_update_ts": 1773204153.457635
+    "last_update_ts": 1773225988.1698124
   },
   {
     "symbol": "VTHOUSDT",
     "entry_price": 0.0006191,
-    "highest_price": 0.0006192,
-    "lowest_price": 0.0006191,
-    "current_price": 0.0006192,
+    "highest_price": 0.00062399,
+    "lowest_price": 0.00059617,
+    "current_price": 0.00059617,
     "alert_time_ts": 1773203932.0348175,
     "alert_time": "2026-03-11 04:38:52 UTC",
     "timeframe": "1h",
@@ -227,14 +227,14 @@
     },
     "tp_sent": [],
     "reversal_warned": false,
-    "last_update_ts": 1773204153.457635
+    "last_update_ts": 1773225988.1698124
   },
   {
     "symbol": "TAUSDT",
     "entry_price": 0.04425,
     "highest_price": 0.04426,
-    "lowest_price": 0.04425,
-    "current_price": 0.04426,
+    "lowest_price": 0.044123,
+    "current_price": 0.04416845,
     "alert_time_ts": 1773203957.3561332,
     "alert_time": "2026-03-11 04:39:17 UTC",
     "timeframe": "1h",
@@ -273,6 +273,57 @@
     },
     "tp_sent": [],
     "reversal_warned": false,
-    "last_update_ts": 1773204153.457635
+    "last_update_ts": 1773225988.1698124
+  },
+  {
+    "symbol": "ENJUSDT",
+    "entry_price": 0.01889,
+    "highest_price": 0.01889,
+    "lowest_price": 0.01889,
+    "current_price": 0.01889,
+    "alert_time_ts": 1773226000.6897418,
+    "alert_time": "2026-03-11 10:46:40 UTC",
+    "timeframe": "1h",
+    "price_change_24h": 5.178,
+    "breakout_margin_pct": 0.5420054200541973,
+    "high_24h": 0.01845,
+    "vol_candle_1": 127508.41116,
+    "vol_candle_2": 146227.59611,
+    "vol_candle_3": 342514.18642,
+    "vol_candle_1_fmt": "$128K",
+    "vol_candle_2_fmt": "$146K",
+    "vol_candle_3_fmt": "$343K",
+    "vol_ratio": 2.69,
+    "candle_colors": [
+      "green",
+      "green",
+      "green"
+    ],
+    "rvol": 4.456961491413709,
+    "btc_price": 69631.1,
+    "candle_time": "2026-03-11 09:00 UTC",
+    "additional_data": {
+      "rvol_20": 4.46,
+      "vol_baseline_avg": 76849.26,
+      "oi_current_usdt": 2096707.59,
+      "oi_avg_24h_usdt": 2004313.9,
+      "oi_change_pct": 4.61,
+      "oi_growth_current": 45245.22,
+      "oi_growth_avg": 4175.38,
+      "oi_growth_ratio": 10.84,
+      "funding_rate": -0.0794,
+      "funding_in_ideal_range": false,
+      "vol_24h_usdt": 2159331.54,
+      "vol_24h_above_50m": false,
+      "ema50_4h": 0.01842959,
+      "price_above_ema50_4h": true,
+      "ema50_distance_pct": 0.65,
+      "volatility_recent_10_pct": 1.4641,
+      "volatility_prior_10_pct": 1.2427,
+      "volatility_compression_ratio": 1.178,
+      "is_compressed": false
+    },
+    "tp_sent": [],
+    "reversal_warned": false
   }
 ]

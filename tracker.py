@@ -123,6 +123,8 @@ class SignalTracker:
             "vol_candle_1_fmt":    alert.get("vol_candle_1_fmt"),
             "vol_candle_2_fmt":    alert.get("vol_candle_2_fmt"),
             "vol_candle_3_fmt":    alert.get("vol_candle_3_fmt"),
+            "vol_ratio":           alert.get("vol_ratio"),
+            "candle_colors":       alert.get("candle_colors"),
             "rvol":                alert.get("rvol"),
             "btc_price":           alert.get("btc_price"),
             "candle_time":         alert.get("candle_time"),

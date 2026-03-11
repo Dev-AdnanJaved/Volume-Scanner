@@ -221,6 +221,7 @@ class TelegramCommandListener:
             "/report":          lambda: self._cmd_report(chat_id, args),
             "/summary":         lambda: self._cmd_summary(chat_id),
             "/active":          lambda: self._cmd_active(chat_id),
+            "/export":          lambda: self._cmd_export(chat_id),
             "/detailed_report": lambda: self._cmd_detailed_report(chat_id),
             "/help":            lambda: self._cmd_help(chat_id),
             "/start":           lambda: self._cmd_help(chat_id),
@@ -547,6 +548,64 @@ class TelegramCommandListener:
         else:
             logger.info("Detailed report sent: %d signals", len(report))
 
+    # ── /export ─────────────────────────────────────────────────────
+
+    def _cmd_export(self, chat_id: str) -> None:
+        self._send(chat_id, "⏳ Exporting active signals…")
+
+        try:
+            prices = self._binance.get_mark_prices()
+            self._tracker.apply_prices(prices)
+        except Exception:
+            prices = {}
+
+        signals = self._tracker.get_active_signals()
+        if not signals:
+            self._send(chat_id, "📭 No active signals to export.")
+            return
+
+        for sig in signals:
+            sym = sig["symbol"]
+            entry = sig.get("entry_price", 0)
+            current = prices.get(sym, sig.get("current_price", 0))
+            highest = sig.get("highest_price", entry)
+            lowest = sig.get("lowest_price", entry)
+            if current > highest:
+                highest = current
+            sig["current_price"] = current
+            sig["highest_price"] = highest
+            if entry > 0:
+                sig["current_pct"] = round(((current - entry) / entry) * 100, 2)
+                sig["peak_pct"] = round(((highest - entry) / entry) * 100, 2)
+                sig["lowest_pct"] = round(((lowest - entry) / entry) * 100, 2) if lowest > 0 else None
+
+        now_ts = int(time.time())
+        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        tmp_path = f"/tmp/active_signals_{now_str}_{now_ts}.json"
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(signals, f, indent=2)
+        except Exception as exc:
+            self._send(chat_id, f"❌ Failed to write file: {exc}")
+            return
+
+        caption = (
+            f"📡 Active Signals Export\n"
+            f"Signals: {len(signals)}\n"
+            f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
+        )
+        success = self._send_document(chat_id, tmp_path, caption)
+
+        try:
+            os.remove(tmp_path)
+        except Exception:
+            pass
+
+        if not success:
+            self._send(chat_id, "❌ Failed to send file. Check bot logs.")
+        else:
+            logger.info("Active signals export sent: %d signals", len(signals))
+
     # ── /help ────────────────────────────────────────────────────────
 
     def _cmd_help(self, chat_id: str) -> None:
@@ -556,6 +615,7 @@ class TelegramCommandListener:
             "/report BTC — Detailed breakdown for one coin\n"
             "/summary — Win rates, averages, best/worst\n"
             "/active — Quick list of tracked signals\n"
+            "/export — JSON file of all currently active signals\n"
             "/detailed_report — JSON file of completed signals (≥7 days)\n"
             "                   Includes all main + additional data,\n"
             "                   peak, lowest, exit prices\n"
@@ -566,7 +626,7 @@ class TelegramCommandListener:
             "⚠️ Auto reversal warnings\n\n"
             "<b>Signal criteria:</b>\n"
             "1️⃣ 1h close breaks last 24h high\n"
-            "2️⃣ Last 3 candles volume increasing\n"
+            "2️⃣ Last 3 candles volume increasing (min 2x ratio)\n"
             "3️⃣ 24h price change ≤ ±20%"
         )
         self._send(chat_id, text)

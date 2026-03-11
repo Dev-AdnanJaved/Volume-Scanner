@@ -281,6 +281,10 @@ class Scanner:
         # ── ALL MAIN CRITERIA PASSED — collect additional data ───────
         additional = self._collect_additional(symbol, candles, last, ticker)
 
+        candle_colors = []
+        for c in consec:
+            candle_colors.append("green" if c["close"] >= c["open"] else "red")
+
         self._cooldown.record(symbol)
 
         price = self._mark_prices.get(symbol)
@@ -305,6 +309,8 @@ class Scanner:
             "vol_candle_1_fmt":  vol_vals[0],
             "vol_candle_2_fmt":  vol_vals[1],
             "vol_candle_3_fmt":  vol_vals[2],
+            "vol_ratio":         round(vol_ratio, 2),
+            "candle_colors":     candle_colors,
             "rvol":              rvol,
             "btc_price":         btc_price,
             "candle_time":       candle_dt.strftime("%Y-%m-%d %H:%M UTC"),
