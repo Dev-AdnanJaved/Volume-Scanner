@@ -26,7 +26,8 @@
     "reversal_alert_enabled": true,
     "min_reversal_peak_pct": 3.0,
     "reversal_drop_from_peak_pct": 5.0,
-    "detailed_report_min_age_hours": 168
+    "detailed_report_min_age_hours": 168,
+    "daily_report_hour": 0
   },
   "rate_limit": {
     "binance_delay_ms": 100

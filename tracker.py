@@ -46,6 +46,10 @@ class SignalTracker:
         self._min_reversal_peak: float = tc.get("min_reversal_peak_pct", 3.0)
         self._reversal_drop: float = tc.get("reversal_drop_from_peak_pct", 5.0)
         self._detailed_min_age: float = tc.get("detailed_report_min_age_hours", 168) * 3600
+        self._daily_report_hour: int = int(tc.get("daily_report_hour", 0))
+
+        self._pending_file = self._data_dir / "pending_report.json"
+        self._last_report_file = self._data_dir / "last_report_date.txt"
 
         self._binance = binance
         self._notifier = notifier
@@ -54,9 +58,9 @@ class SignalTracker:
 
         self._data_dir.mkdir(parents=True, exist_ok=True)
         logger.info(
-            "Tracker initialised  (max_age=%dh, update=%ds, TP targets=%s, reversal=%s)",
+            "Tracker initialised  (max_age=%dh, update=%ds, TP targets=%s, reversal=%s, report_hour=%02d:00 UTC)",
             self._max_age // 3600, self._update_interval,
-            self._tp_targets, self._reversal_enabled,
+            self._tp_targets, self._reversal_enabled, self._daily_report_hour,
         )
 
     # ── file I/O ─────────────────────────────────────────────────────
@@ -290,31 +294,65 @@ class SignalTracker:
                 self._save(self._history_file, history)
 
         if archived > 0:
-            self._send_expired_report(newly_archived)
+            self._add_to_pending(newly_archived)
 
         return archived
 
-    def _send_expired_report(self, signals: list) -> None:
-        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        tmp_path = self._data_dir / f"report_{now_str}_{int(time.time())}.json"
+    def _add_to_pending(self, signals: list) -> None:
+        with self._lock:
+            pending = self._load(self._pending_file)
+            pending.extend(signals)
+            self._save(self._pending_file, pending)
+        logger.info("Queued %d signal(s) for daily report", len(signals))
+
+    def _check_daily_report(self) -> None:
+        now_utc = datetime.now(timezone.utc)
+        if now_utc.hour != self._daily_report_hour:
+            return
+
+        today_str = now_utc.strftime("%Y-%m-%d")
+
+        last_sent = ""
+        if self._last_report_file.exists():
+            try:
+                last_sent = self._last_report_file.read_text(encoding="utf-8").strip()
+            except IOError:
+                pass
+
+        if last_sent == today_str:
+            return
+
+        with self._lock:
+            pending = self._load(self._pending_file)
+            if not pending:
+                self._last_report_file.write_text(today_str, encoding="utf-8")
+                return
+            self._save(self._pending_file, [])
+
+        tmp_path = self._data_dir / f"report_{today_str}.json"
         try:
             with open(tmp_path, "w", encoding="utf-8") as fh:
-                json.dump(signals, fh, indent=2)
-            count = len(signals)
-            symbols = ", ".join(s["symbol"] for s in signals)
+                json.dump(pending, fh, indent=2)
+            count = len(pending)
+            symbols = ", ".join(s["symbol"] for s in pending)
             caption = (
-                f"7-day report — {count} signal{'s' if count != 1 else ''} completed\n"
+                f"Daily 7-day report — {count} signal{'s' if count != 1 else ''} completed\n"
                 f"{symbols}"
             )
             self._notifier.send_document(str(tmp_path), caption=caption)
-            logger.info("Sent 7-day report for %d signal(s): %s", count, symbols)
+            logger.info("Sent daily report for %d signal(s): %s", count, symbols)
         except Exception as exc:
-            logger.error("Failed to send expired report: %s", exc)
+            logger.error("Failed to send daily report: %s", exc)
         finally:
             try:
                 os.remove(tmp_path)
             except OSError:
                 pass
+
+        try:
+            self._last_report_file.write_text(today_str, encoding="utf-8")
+        except IOError as exc:
+            logger.error("Failed to save last_report_date: %s", exc)
 
     # ── data access ──────────────────────────────────────────────────
 
@@ -357,6 +395,7 @@ class SignalTracker:
                 archived = self.archive_expired()
                 if archived:
                     logger.info("Tracker: archived %d expired signals", archived)
+                self._check_daily_report()
             except Exception:
                 logger.error("Tracker loop error", exc_info=True)
             self._sleep(self._update_interval)
