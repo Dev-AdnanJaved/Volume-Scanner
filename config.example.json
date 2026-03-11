@@ -14,7 +14,7 @@
     "consecutive_vol_candles": 3,
     "max_price_change_24h_pct": 20.0,
     "min_volume_usdt": 0,
-    "cooldown_hours": 12,
+    "cooldown_hours": 168,
     "excluded_symbols": ["USDCUSDT", "BTCDOMUSDT"]
   },
   "tracker": {
