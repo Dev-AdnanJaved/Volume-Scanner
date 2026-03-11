@@ -3860,3 +3860,28 @@
 2026-03-11 03:41:45 [INFO] scanner: Scanning [108/542] ICPUSDT
 2026-03-11 03:41:45 [INFO] scanner: ICPUSDT  rejected — close 2.40000000 did not break 24h high 2.54800000
 2026-03-11 03:41:45 [INFO] scanner: Scanning [109/542] APTUSDT
+2026-03-11 03:41:46 [INFO] scanner: APTUSDT  rejected — close 0.94790000 did not break 24h high 0.99940000
+2026-03-11 03:41:46 [INFO] scanner: Scanning [110/542] QNTUSDT
+2026-03-11 03:41:46 [INFO] scanner: QNTUSDT  rejected — close 62.71000000 did not break 24h high 64.43000000
+2026-03-11 03:41:46 [INFO] scanner: Scanning [111/542] FETUSDT
+2026-03-11 03:41:46 [INFO] scanner: FETUSDT  rejected — close 0.15530000 did not break 24h high 0.15700000
+2026-03-11 03:41:46 [INFO] scanner: Scanning [112/542] HOOKUSDT
+2026-03-11 03:41:46 [INFO] scanner: HOOKUSDT  rejected — close 0.02003000 did not break 24h high 0.02114000
+2026-03-11 03:41:46 [INFO] scanner: Scanning [113/542] MAGICUSDT
+2026-03-11 03:41:47 [INFO] scanner: MAGICUSDT  rejected — close 0.06373000 did not break 24h high 0.06859000
+2026-03-11 03:41:47 [INFO] scanner: Scanning [114/542] TUSDT
+2026-03-11 03:41:47 [INFO] scanner: TUSDT  ✅ Breakout +0.28% above 24h high 0.00684400
+2026-03-11 03:41:47 [INFO] scanner: TUSDT  rejected — volume NOT consecutively increasing: $954K → $252K → $227K
+2026-03-11 03:41:47 [INFO] scanner: Scanning [115/542] HIGHUSDT
+2026-03-11 03:41:47 [INFO] scanner: HIGHUSDT  rejected — close 0.13550000 did not break 24h high 0.13880000
+2026-03-11 03:41:47 [INFO] scanner: Scanning [116/542] MINAUSDT
+2026-03-11 03:41:47 [INFO] scanner: MINAUSDT  rejected — close 0.05437000 did not break 24h high 0.05585000
+2026-03-11 03:41:47 [INFO] scanner: Scanning [117/542] ASTRUSDT
+2026-03-11 03:41:47 [INFO] scanner: ASTRUSDT  rejected — close 0.00738600 did not break 24h high 0.00784400
+2026-03-11 03:41:47 [INFO] scanner: Scanning [118/542] PHBUSDT
+2026-03-11 03:41:48 [INFO] scanner: PHBUSDT  rejected — close 0.14960000 did not break 24h high 0.15570000
+2026-03-11 03:41:48 [INFO] scanner: Scanning [119/542] GMXUSDT
+2026-03-11 03:41:48 [INFO] main: Received signal 15 — shutting down …
+2026-03-11 03:41:48 [INFO] scanner: GMXUSDT  rejected — close 6.48500000 did not break 24h high 6.83500000
+2026-03-11 03:41:48 [INFO] scanner: Cycle finished in 28.8s
+2026-03-11 03:41:48 [INFO] main: Shutdown complete.
