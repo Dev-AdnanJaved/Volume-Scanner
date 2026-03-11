@@ -29,6 +29,10 @@
     "detailed_report_min_age_hours": 168,
     "daily_report_hour": 0
   },
+  "market_cap": {
+    "enabled": false,
+    "cache_minutes": 120
+  },
   "rate_limit": {
     "binance_delay_ms": 100
   },

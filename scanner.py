@@ -25,6 +25,7 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from binance_client import BinanceClient
+from market_cap import MarketCapProvider
 from notifier import TelegramNotifier
 from tracker import SignalTracker
 
@@ -69,6 +70,7 @@ class Scanner:
         binance: BinanceClient,
         notifier: TelegramNotifier,
         tracker: Optional[SignalTracker] = None,
+        market_cap: Optional[MarketCapProvider] = None,
     ) -> None:
         sc = config["scanner"]
 
@@ -86,6 +88,7 @@ class Scanner:
         self._binance = binance
         self._tg = notifier
         self._tracker = tracker
+        self._market_cap = market_cap
         self._cooldown = _CooldownTracker(cooldown_seconds=self.cooldown_hours * 3600)
         self._mark_prices: Dict[str, float] = {}
         self._tickers: Dict[str, dict] = {}
@@ -394,6 +397,16 @@ class Scanner:
                     compression_ratio = recent_range_pct / prior_range_pct
                     data["volatility_compression_ratio"] = round(compression_ratio, 3)
                     data["is_compressed"] = compression_ratio < 0.7
+        except Exception:
+            pass
+
+        # Market cap from CoinGecko (optional)
+        try:
+            if self._market_cap is not None:
+                base = symbol.replace("USDT", "").replace("BUSD", "")
+                mcap = self._market_cap.get(base)
+                data["market_cap_usd"] = mcap
+                data["market_cap_fmt"] = self._market_cap.format(base)
         except Exception:
             pass
 

@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set
 
 from binance_client import BinanceClient
+from market_cap import MarketCapProvider
 from notifier import TelegramNotifier
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ class SignalTracker:
         config: dict,
         binance: BinanceClient,
         notifier: TelegramNotifier,
+        market_cap: Optional[MarketCapProvider] = None,
     ) -> None:
         tc = config.get("tracker", {})
         self._max_age = tc.get("max_age_hours", 168) * 3600
@@ -53,6 +55,7 @@ class SignalTracker:
 
         self._binance = binance
         self._notifier = notifier
+        self._market_cap = market_cap
         self._lock = threading.Lock()
         self._running = False
 
@@ -283,6 +286,13 @@ class SignalTracker:
                         sig["exit_pct"] = round(((current - entry) / entry) * 100, 2)
                         sig["exit_price"] = current
                         sig["highest_pct"] = sig["peak_pct"]
+                    if self._market_cap is not None:
+                        try:
+                            base = sig["symbol"].replace("USDT", "").replace("BUSD", "")
+                            sig["market_cap_usd_exit"] = self._market_cap.get(base)
+                            sig["market_cap_exit_fmt"] = self._market_cap.format(base)
+                        except Exception:
+                            pass
                     history.append(sig)
                     newly_archived.append(sig)
                     archived += 1

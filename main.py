@@ -18,6 +18,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 from binance_client import BinanceClient
+from market_cap import MarketCapProvider
 from notifier import TelegramNotifier
 from scanner import Scanner
 from tracker import SignalTracker
@@ -118,6 +119,17 @@ def main() -> None:
         logger.error("Telegram validation failed — aborting.")
         sys.exit(1)
 
+    # market cap provider (optional)
+    mc_cfg = config.get("market_cap", {})
+    market_cap = None
+    if mc_cfg.get("enabled", False):
+        market_cap = MarketCapProvider(
+            cache_minutes=mc_cfg.get("cache_minutes", 120),
+        )
+        logger.info("MarketCapProvider enabled (cache %d min)", mc_cfg.get("cache_minutes", 120))
+    else:
+        logger.info("MarketCapProvider disabled")
+
     # tracker (optional)
     tracker_cfg = config.get("tracker", {})
     tracker = None
@@ -126,7 +138,7 @@ def main() -> None:
     cmd_thread = None
 
     if tracker_cfg.get("enabled", False):
-        tracker = SignalTracker(config, binance, notifier)
+        tracker = SignalTracker(config, binance, notifier, market_cap)
 
         tracker_thread = threading.Thread(
             target=tracker.run, name="tracker", daemon=True,
@@ -148,7 +160,7 @@ def main() -> None:
         logger.info("Tracker disabled")
 
     # scanner (main thread)
-    scanner = Scanner(config, binance, notifier, tracker)
+    scanner = Scanner(config, binance, notifier, tracker, market_cap)
 
     def _shutdown(sig, _frame):
         logger.info("Received signal %s — shutting down …", sig)
