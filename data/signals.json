@@ -2,9 +2,9 @@
   {
     "symbol": "TRXUSDT",
     "entry_price": 0.28668265,
-    "highest_price": 0.28668265,
+    "highest_price": 0.28674657,
     "lowest_price": 0.28668265,
-    "current_price": 0.28668265,
+    "current_price": 0.28674657,
     "alert_time_ts": 1773203855.619884,
     "alert_time": "2026-03-11 04:37:35 UTC",
     "timeframe": "1h",
@@ -42,14 +42,15 @@
       "is_compressed": true
     },
     "tp_sent": [],
-    "reversal_warned": false
+    "reversal_warned": false,
+    "last_update_ts": 1773204153.457635
   },
   {
     "symbol": "ANKRUSDT",
     "entry_price": 0.00443454,
-    "highest_price": 0.00443454,
+    "highest_price": 0.004439,
     "lowest_price": 0.00443454,
-    "current_price": 0.00443454,
+    "current_price": 0.004439,
     "alert_time_ts": 1773203870.4795427,
     "alert_time": "2026-03-11 04:37:50 UTC",
     "timeframe": "1h",
@@ -87,14 +88,15 @@
       "is_compressed": false
     },
     "tp_sent": [],
-    "reversal_warned": false
+    "reversal_warned": false,
+    "last_update_ts": 1773204153.457635
   },
   {
     "symbol": "JOEUSDT",
     "entry_price": 0.04396475,
-    "highest_price": 0.04396475,
+    "highest_price": 0.04438162,
     "lowest_price": 0.04396475,
-    "current_price": 0.04396475,
+    "current_price": 0.04438162,
     "alert_time_ts": 1773203887.6205509,
     "alert_time": "2026-03-11 04:38:07 UTC",
     "timeframe": "1h",
@@ -132,14 +134,15 @@
       "is_compressed": false
     },
     "tp_sent": [],
-    "reversal_warned": false
+    "reversal_warned": false,
+    "last_update_ts": 1773204153.457635
   },
   {
     "symbol": "ONGUSDT",
     "entry_price": 0.06625227,
     "highest_price": 0.06625227,
-    "lowest_price": 0.06625227,
-    "current_price": 0.06625227,
+    "lowest_price": 0.0658,
+    "current_price": 0.0658,
     "alert_time_ts": 1773203899.8840442,
     "alert_time": "2026-03-11 04:38:19 UTC",
     "timeframe": "1h",
@@ -177,14 +180,15 @@
       "is_compressed": false
     },
     "tp_sent": [],
-    "reversal_warned": false
+    "reversal_warned": false,
+    "last_update_ts": 1773204153.457635
   },
   {
     "symbol": "VTHOUSDT",
     "entry_price": 0.0006191,
-    "highest_price": 0.0006191,
+    "highest_price": 0.0006192,
     "lowest_price": 0.0006191,
-    "current_price": 0.0006191,
+    "current_price": 0.0006192,
     "alert_time_ts": 1773203932.0348175,
     "alert_time": "2026-03-11 04:38:52 UTC",
     "timeframe": "1h",
@@ -222,14 +226,15 @@
       "is_compressed": false
     },
     "tp_sent": [],
-    "reversal_warned": false
+    "reversal_warned": false,
+    "last_update_ts": 1773204153.457635
   },
   {
     "symbol": "TAUSDT",
     "entry_price": 0.04425,
-    "highest_price": 0.04425,
+    "highest_price": 0.04426,
     "lowest_price": 0.04425,
-    "current_price": 0.04425,
+    "current_price": 0.04426,
     "alert_time_ts": 1773203957.3561332,
     "alert_time": "2026-03-11 04:39:17 UTC",
     "timeframe": "1h",
@@ -267,6 +272,7 @@
       "is_compressed": false
     },
     "tp_sent": [],
-    "reversal_warned": false
+    "reversal_warned": false,
+    "last_update_ts": 1773204153.457635
   }
 ]
