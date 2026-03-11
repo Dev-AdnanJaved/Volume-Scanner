@@ -12,6 +12,7 @@
     "scan_interval_seconds": 900,
     "breakout_lookback_candles": 24,
     "consecutive_vol_candles": 3,
+    "consecutive_vol_min_ratio": 2.0,
     "max_price_change_24h_pct": 20.0,
     "min_volume_usdt": 0,
     "cooldown_hours": 168,

@@ -80,6 +80,7 @@ class Scanner:
         self.consec_vol_candles:     int   = sc.get("consecutive_vol_candles", 3)
         self.max_price_chg_24h:      float = sc.get("max_price_change_24h_pct", 20.0)
         self.min_vol_usdt:           float = sc.get("min_volume_usdt", 0)
+        self.vol_ratio_min:          float = sc.get("consecutive_vol_min_ratio", 2.0)
         self.cooldown_hours:         float = sc.get("cooldown_hours", 12)
         self.excluded:               set   = set(sc.get("excluded_symbols", []))
 
@@ -248,8 +249,17 @@ class Scanner:
                         symbol, " → ".join(vol_vals))
             return None
 
+        first_vol = consec[0]["quote_volume"]
+        last_vol = consec[-1]["quote_volume"]
+        vol_ratio = last_vol / first_vol if first_vol > 0 else 0
+        if vol_ratio < self.vol_ratio_min:
+            vol_vals = [self._fmt_vol_usd(c["quote_volume"]) for c in consec]
+            logger.info("%s  rejected — volume ratio %.2fx < min %.2fx: %s",
+                        symbol, vol_ratio, self.vol_ratio_min, " → ".join(vol_vals))
+            return None
+
         vol_vals = [self._fmt_vol_usd(c["quote_volume"]) for c in consec]
-        logger.info("%s  ✅ Consecutive volume: %s", symbol, " → ".join(vol_vals))
+        logger.info("%s  ✅ Consecutive volume: %s (ratio %.2fx)", symbol, " → ".join(vol_vals), vol_ratio)
 
         # ── FILTER 3: 24h price change cap ───────────────────────────
         price_chg_24h = ticker.get("price_change_pct", 0)
