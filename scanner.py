@@ -81,6 +81,7 @@ class Scanner:
         self.max_price_chg_24h:      float = sc.get("max_price_change_24h_pct", 20.0)
         self.min_vol_usdt:           float = sc.get("min_volume_usdt", 0)
         self.vol_ratio_min:          float = sc.get("consecutive_vol_min_ratio", 2.0)
+        self.high_brk_warn_pct:      float = sc.get("high_breakout_warning_pct", 5.0)
         self.cooldown_hours:         float = sc.get("cooldown_hours", 12)
         self.excluded:               set   = set(sc.get("excluded_symbols", []))
 
@@ -296,7 +297,7 @@ class Scanner:
         avg_baseline = sum(c["quote_volume"] for c in vol_baseline) / len(vol_baseline) if vol_baseline else 0
         rvol = current_vol / avg_baseline if avg_baseline > 0 else 0
 
-        high_breakout_warning = brk_margin_pct > 5.0
+        high_breakout_warning = brk_margin_pct > self.high_brk_warn_pct
 
         alert = {
             "symbol":            symbol,
