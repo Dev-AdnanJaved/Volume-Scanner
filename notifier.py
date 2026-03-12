@@ -140,9 +140,12 @@ class TelegramNotifier:
         cooldown = d.get("cooldown_hours", 12)
 
         chg_icon = "🟢" if price_chg >= 0 else "🔴"
+        high_brk = d.get("high_breakout_warning", False)
+
+        header = "⚠️ <b>BREAKOUT SIGNAL — HIGH BREAKOUT</b>" if high_brk else "🚨 <b>BREAKOUT SIGNAL</b>"
 
         lines = [
-            f"🚨 <b>BREAKOUT SIGNAL</b>",
+            header,
             f"{'━' * 28}",
             "",
             f"📌 <b>{symbol}</b>  |  {tf}",
@@ -152,9 +155,14 @@ class TelegramNotifier:
             f"2️⃣ <b>Volume:</b>  {v1} → {v2} → {v3}  ({rvol:.1f}x avg)",
             f"3️⃣ <b>24h Change:</b>  {chg_icon} {price_chg:+.1f}%",
             "",
+        ]
+        if high_brk:
+            lines.append(f"⚠️ <b>Warning:</b> Breakout margin {brk_margin:.2f}% > 5% — enter with caution")
+            lines.append("")
+        lines.extend([
             f"🕐 <b>Time:</b>  {alert_time}",
             f"⏱ <b>Cooldown:</b>  {cooldown}h",
-        ]
+        ])
         return "\n".join(lines)
 
     # ── take-profit alert format ─────────────────────────────────────

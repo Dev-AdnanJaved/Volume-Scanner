@@ -296,12 +296,15 @@ class Scanner:
         avg_baseline = sum(c["quote_volume"] for c in vol_baseline) / len(vol_baseline) if vol_baseline else 0
         rvol = current_vol / avg_baseline if avg_baseline > 0 else 0
 
+        high_breakout_warning = brk_margin_pct > 5.0
+
         alert = {
             "symbol":            symbol,
             "timeframe":         self.timeframe,
             "price":             f"{price:.8f}" if price else "N/A",
             "price_change_24h":  price_chg_24h,
             "breakout_margin_pct": brk_margin_pct,
+            "high_breakout_warning": high_breakout_warning,
             "high_24h":          high_24h,
             "vol_candle_1":      consec[0]["quote_volume"],
             "vol_candle_2":      consec[1]["quote_volume"],
