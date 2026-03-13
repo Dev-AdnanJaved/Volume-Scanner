@@ -380,6 +380,7 @@ class TelegramCommandListener:
             if peak_hrs is not None:
                 lines.append(f"Peak at:   {peak_hrs:.1f}h after entry")
 
+            first_tp_hrs = None
             for tp in self._tracker.tp_targets:
                 key = f"tp{tp}"
                 if outcome.get(f"{key}_hit"):
@@ -388,9 +389,14 @@ class TelegramCommandListener:
                     tp_line = f"TP +{tp}%:   ✅ hit"
                     if tp_hrs is not None:
                         tp_line += f" @ {tp_hrs:.1f}h"
+                        if first_tp_hrs is None or tp_hrs < first_tp_hrs:
+                            first_tp_hrs = tp_hrs
                     if tp_dd and tp_dd < 0:
                         tp_line += f" (DD before: {tp_dd:+.2f}%)"
                     lines.append(tp_line)
+
+            if first_tp_hrs is not None:
+                lines.append(f"1st TP:    ⚡ {first_tp_hrs:.1f}h after entry")
 
         btc_at = sig.get("btc_price")
         btc_now = prices.get("BTCUSDT")
