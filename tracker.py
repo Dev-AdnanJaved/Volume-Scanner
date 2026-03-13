@@ -355,6 +355,7 @@ class SignalTracker:
             "is_new_high": is_new_high,
         }
         journey.append(snapshot)
+        journey.sort(key=lambda s: s.get("timestamp_ts", 0))
 
         sig["_prev_highest"] = sig.get("highest_price", current)
         sig["_prev_lowest"] = sig.get("lowest_price", current)
@@ -383,6 +384,8 @@ class SignalTracker:
         if btc_entry and btc_price and btc_entry > 0:
             btc_pct = round(((btc_price - btc_entry) / btc_entry) * 100.0, 2)
 
+        vol_1h = self._fetch_latest_volume(sig["symbol"])
+
         snapshot = {
             "event": event,
             "timestamp": self._ts_to_utc(now),
@@ -392,11 +395,12 @@ class SignalTracker:
             "pct_from_entry": round(cur_pct, 2),
             "btc_price": btc_price,
             "btc_pct_from_signal_entry": btc_pct,
-            "volume_1h": None,
+            "volume_1h": vol_1h,
             "is_new_low": False,
             "is_new_high": False,
         }
         journey.append(snapshot)
+        journey.sort(key=lambda s: s.get("timestamp_ts", 0))
 
     def fetch_and_apply(self) -> None:
         try:
