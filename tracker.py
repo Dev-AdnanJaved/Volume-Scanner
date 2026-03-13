@@ -110,8 +110,9 @@ class SignalTracker:
     # ── outcome helpers ───────────────────────────────────────────────
 
     @staticmethod
-    def _init_outcome(tp_targets: List[int]) -> dict:
+    def _init_outcome(tp_targets: List[int], high_breakout_warning: bool = False) -> dict:
         outcome: dict = {
+            "high_breakout_warning": high_breakout_warning,
             "max_drawdown_pct": 0.0,
             "max_drawdown_time": None,
             "max_drawdown_hours_after_entry": None,
@@ -168,7 +169,10 @@ class SignalTracker:
             "additional_data":     alert.get("additional_data", {}),
             "tp_sent":             [],
             "reversal_warned":     False,
-            "outcome":             self._init_outcome(self._tp_targets),
+            "outcome":             self._init_outcome(
+                self._tp_targets,
+                high_breakout_warning=alert.get("high_breakout_warning", False),
+            ),
             "price_journey":       [],
         }
 
@@ -196,6 +200,7 @@ class SignalTracker:
                     continue
                 current = prices[sym]
                 entry = sig.get("entry_price", 0)
+                prev_update_ts = sig.get("last_update_ts", sig.get("alert_time_ts", now))
                 sig["current_price"] = current
                 sig["last_update_ts"] = now
 
@@ -206,7 +211,7 @@ class SignalTracker:
                     sig["lowest_price"] = current
 
                 if entry > 0:
-                    self._update_outcome(sig, current, entry, now, btc_price)
+                    self._update_outcome(sig, current, entry, now, btc_price, prev_update_ts)
                     self._record_journey_snapshot(sig, current, entry, now, btc_price)
 
                 changed = True
@@ -216,7 +221,10 @@ class SignalTracker:
     def _ensure_outcome(self, sig: dict) -> dict:
         outcome = sig.get("outcome")
         if outcome is None:
-            outcome = self._init_outcome(self._tp_targets)
+            outcome = self._init_outcome(
+                self._tp_targets,
+                high_breakout_warning=sig.get("high_breakout_warning", False),
+            )
             sig["outcome"] = outcome
             tp_sent = sig.get("tp_sent", [])
             if tp_sent:
@@ -232,7 +240,8 @@ class SignalTracker:
         return outcome
 
     def _update_outcome(
-        self, sig: dict, current: float, entry: float, now: float, btc_price: Optional[float]
+        self, sig: dict, current: float, entry: float, now: float,
+        btc_price: Optional[float], prev_update_ts: float,
     ) -> None:
         outcome = self._ensure_outcome(sig)
 
@@ -255,8 +264,7 @@ class SignalTracker:
         if cur_pct < 0 and not has_any_tp:
             outcome["went_negative_before_tp"] = True
 
-        last_ts = sig.get("last_update_ts", now)
-        elapsed_hours = (now - last_ts) / 3600.0
+        elapsed_hours = (now - prev_update_ts) / 3600.0
         if cur_pct < 0 and elapsed_hours > 0:
             outcome["hours_negative_total"] = round(
                 outcome.get("hours_negative_total", 0.0) + elapsed_hours, 2
