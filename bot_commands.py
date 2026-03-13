@@ -359,6 +359,39 @@ class TelegramCommandListener:
                 comp = "✅ compressed" if add.get("is_compressed") else "➡️ normal"
                 lines.append(f"Volatility: {comp} (ratio {cr:.2f})")
 
+        outcome = sig.get("outcome", {})
+        if outcome:
+            lines.append("")
+            lines.append("━━━ 📉 OUTCOME ━━━")
+            sig_type = outcome.get("signal_type", "active")
+            type_icons = {"fast": "⚡", "slow": "🐌", "delayed": "🕐", "failed": "❌", "active": "🔄"}
+            lines.append(f"Type:      {type_icons.get(sig_type, '❓')} {sig_type}")
+
+            dd = outcome.get("max_drawdown_pct", 0)
+            dd_hrs = outcome.get("max_drawdown_hours_after_entry")
+            dd_time = f" ({dd_hrs:.1f}h after entry)" if dd_hrs is not None else ""
+            lines.append(f"Max DD:    {dd:+.2f}%{dd_time}")
+
+            neg = outcome.get("went_negative_before_tp", False)
+            neg_hrs = outcome.get("hours_negative_total", 0)
+            lines.append(f"Neg b/TP:  {'Yes' if neg else 'No'}" + (f" ({neg_hrs:.1f}h total)" if neg_hrs > 0 else ""))
+
+            peak_hrs = outcome.get("peak_hours_after_entry")
+            if peak_hrs is not None:
+                lines.append(f"Peak at:   {peak_hrs:.1f}h after entry")
+
+            for tp in self._tracker.tp_targets:
+                key = f"tp{tp}"
+                if outcome.get(f"{key}_hit"):
+                    tp_hrs = outcome.get(f"{key}_hit_hours_after_entry")
+                    tp_dd = outcome.get(f"{key}_max_drawdown_before", 0)
+                    tp_line = f"TP +{tp}%:   ✅ hit"
+                    if tp_hrs is not None:
+                        tp_line += f" @ {tp_hrs:.1f}h"
+                    if tp_dd and tp_dd < 0:
+                        tp_line += f" (DD before: {tp_dd:+.2f}%)"
+                    lines.append(tp_line)
+
         btc_at = sig.get("btc_price")
         btc_now = prices.get("BTCUSDT")
         if btc_at and btc_now:
@@ -519,6 +552,9 @@ class TelegramCommandListener:
                 "additional_data":     sig.get("additional_data", {}),
                 "btc_price_at_signal": sig.get("btc_price"),
                 "candle_time":         sig.get("candle_time"),
+                "high_breakout_warning": sig.get("high_breakout_warning", False),
+                "outcome":             sig.get("outcome", {}),
+                "price_journey":       sig.get("price_journey", []),
             }
             report.append(record)
 

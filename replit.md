@@ -8,7 +8,10 @@ A Python bot that monitors Binance USDT-M perpetual futures pairs for unusual tr
 - Price breakout confirmation
 - Open Interest surge detection
 - Market cap filtering via CoinGecko API
-- Signal tracker with take-profit alerts and reversal detection
+- Signal tracker with take-profit alerts, reversal detection, and outcome tracking
+- Detailed outcome block per signal: TP hit timestamps, max drawdown, signal type classification
+- Hourly price journey snapshots with BTC price context
+- Signal type classification on archive: fast (<6h), slow (6-72h), delayed (>72h), failed
 - Telegram bot commands for interactive queries
 - Rate limit handling and caching
 
