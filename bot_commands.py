@@ -367,6 +367,10 @@ class TelegramCommandListener:
             type_icons = {"fast": "⚡", "slow": "🐌", "delayed": "🕐", "failed": "❌", "active": "🔄"}
             lines.append(f"Type:      {type_icons.get(sig_type, '❓')} {sig_type}")
 
+            closed = outcome.get("signal_closed", False)
+            close_reason = outcome.get("close_reason")
+            lines.append(f"Status:    {'🔒 Closed' if closed else '🟢 Active'}" + (f" ({close_reason})" if close_reason else ""))
+
             dd = outcome.get("max_drawdown_pct", 0)
             dd_hrs = outcome.get("max_drawdown_hours_after_entry")
             dd_time = f" ({dd_hrs:.1f}h after entry)" if dd_hrs is not None else ""
@@ -397,6 +401,15 @@ class TelegramCommandListener:
 
             if first_tp_hrs is not None:
                 lines.append(f"1st TP:    ⚡ {first_tp_hrs:.1f}h after entry")
+
+            btc_to_tp = outcome.get("btc_change_entry_to_tp")
+            if btc_to_tp is not None:
+                lines.append(f"BTC→1stTP: {btc_to_tp:+.2f}%")
+
+            btc_trend = outcome.get("btc_trend_during_signal")
+            if btc_trend:
+                trend_icons = {"pumping": "🟢", "dumping": "🔴", "ranging": "➡️"}
+                lines.append(f"BTC trend: {trend_icons.get(btc_trend, '❓')} {btc_trend}")
 
         btc_at = sig.get("btc_price")
         btc_now = prices.get("BTCUSDT")
@@ -620,6 +633,8 @@ class TelegramCommandListener:
                 sig["current_pct"] = round(((current - entry) / entry) * 100, 2)
                 sig["peak_pct"] = round(((highest - entry) / entry) * 100, 2)
                 sig["lowest_pct"] = round(((lowest - entry) / entry) * 100, 2) if lowest > 0 else None
+            sig.pop("_prev_highest", None)
+            sig.pop("_prev_lowest", None)
 
         now_ts = int(time.time())
         now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")

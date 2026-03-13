@@ -4,11 +4,15 @@ Signal performance tracker with take-profit alerts.
 Responsibilities:
   - Store every alert to disk with full enrichment (including additional_data)
   - Continuously track highest price AND lowest price since entry
-  - Record hourly price journey snapshots with BTC context
-  - Maintain detailed outcome block (TP hit times, drawdown, signal type)
+  - Record event-based price journey snapshots (new high/low, below entry,
+    4h checkpoint, TP hit, BTC >2% move) — not every hour
+  - Maintain detailed outcome block (TP hit times, drawdown, signal type,
+    close lifecycle, BTC context)
+  - Live signal_type classification (active/fast/slow/delayed during tracking,
+    failed only at archive)
   - Send take-profit target alerts when price hits configurable levels
   - Send reversal warnings when price drops significantly from peak
-  - Archive signals after configurable max age
+  - Archive signals after configurable max age with close reason and BTC trend
 """
 
 from __future__ import annotations
@@ -110,9 +114,8 @@ class SignalTracker:
     # ── outcome helpers ───────────────────────────────────────────────
 
     @staticmethod
-    def _init_outcome(tp_targets: List[int], high_breakout_warning: bool = False) -> dict:
+    def _init_outcome(tp_targets: List[int]) -> dict:
         outcome: dict = {
-            "high_breakout_warning": high_breakout_warning,
             "max_drawdown_pct": 0.0,
             "max_drawdown_time": None,
             "max_drawdown_hours_after_entry": None,
@@ -122,6 +125,11 @@ class SignalTracker:
             "peak_time": None,
             "peak_hours_after_entry": None,
             "signal_type": "active",
+            "signal_closed": False,
+            "close_reason": None,
+            "close_time": None,
+            "btc_change_entry_to_tp": None,
+            "btc_trend_during_signal": None,
         }
         for tp in tp_targets:
             key = f"tp{tp}"
@@ -169,10 +177,7 @@ class SignalTracker:
             "additional_data":     alert.get("additional_data", {}),
             "tp_sent":             [],
             "reversal_warned":     False,
-            "outcome":             self._init_outcome(
-                self._tp_targets,
-                high_breakout_warning=alert.get("high_breakout_warning", False),
-            ),
+            "outcome":             self._init_outcome(self._tp_targets),
             "price_journey":       [],
         }
 
@@ -221,10 +226,7 @@ class SignalTracker:
     def _ensure_outcome(self, sig: dict) -> dict:
         outcome = sig.get("outcome")
         if outcome is None:
-            outcome = self._init_outcome(
-                self._tp_targets,
-                high_breakout_warning=sig.get("high_breakout_warning", False),
-            )
+            outcome = self._init_outcome(self._tp_targets)
             sig["outcome"] = outcome
             tp_sent = sig.get("tp_sent", [])
             if tp_sent:
@@ -237,6 +239,16 @@ class SignalTracker:
                         outcome[f"{key}_max_drawdown_before"] = None
                         outcome[f"{key}_btc_price_at_hit"] = None
                     outcome[f"{key}_hit"] = True
+        outcome.pop("high_breakout_warning", None)
+        for field, default in (
+            ("signal_closed", False),
+            ("close_reason", None),
+            ("close_time", None),
+            ("btc_change_entry_to_tp", None),
+            ("btc_trend_during_signal", None),
+        ):
+            if field not in outcome:
+                outcome[field] = default
         return outcome
 
     def _update_outcome(
@@ -270,8 +282,11 @@ class SignalTracker:
                 outcome.get("hours_negative_total", 0.0) + elapsed_hours, 2
             )
 
+        outcome["signal_type"] = self._classify_signal_type(sig)
+
     def _record_journey_snapshot(
-        self, sig: dict, current: float, entry: float, now: float, btc_price: Optional[float]
+        self, sig: dict, current: float, entry: float, now: float,
+        btc_price: Optional[float],
     ) -> None:
         journey = sig.get("price_journey")
         if journey is None:
@@ -279,22 +294,107 @@ class SignalTracker:
             sig["price_journey"] = journey
 
         alert_ts = sig["alert_time_ts"]
-        current_hour = int(now // 3600)
+        prev_highest = sig.get("_prev_highest", sig.get("highest_price", entry))
+        prev_lowest = sig.get("_prev_lowest", sig.get("lowest_price", entry))
 
+        events: list[str] = []
+
+        is_new_high = current > prev_highest
+        is_new_low = current < prev_lowest if prev_lowest > 0 else False
+
+        if is_new_high:
+            events.append("new_high")
+        if is_new_low:
+            events.append("new_low")
+
+        if current < entry:
+            was_above = prev_highest >= entry and (not journey or journey[-1].get("price", entry) >= entry)
+            if was_above:
+                events.append("below_entry")
+
+        btc_entry = sig.get("btc_price")
+        if btc_entry and btc_price and btc_entry > 0:
+            btc_pct_now = ((btc_price - btc_entry) / btc_entry) * 100.0
+            last_btc_pct = 0.0
+            if journey:
+                last_btc_pct = journey[-1].get("btc_pct_from_signal_entry", 0.0) or 0.0
+            if abs(btc_pct_now - last_btc_pct) >= 2.0:
+                events.append("btc_move")
+
+        hours_since = (now - alert_ts) / 3600.0
+        last_checkpoint_hour = 0.0
         if journey:
-            last_ts = journey[-1].get("timestamp_ts", 0)
-            last_hour = int(last_ts // 3600)
-            if current_hour == last_hour:
-                return
+            for snap in reversed(journey):
+                if "4h_checkpoint" in snap.get("event", ""):
+                    last_checkpoint_hour = snap.get("hours_after_entry", 0.0)
+                    break
+        if hours_since - last_checkpoint_hour >= 4.0:
+            events.append("4h_checkpoint")
+
+        if not events:
+            return
 
         cur_pct = ((current - entry) / entry) * 100.0
+        btc_pct_from_entry = None
+        if btc_entry and btc_price and btc_entry > 0:
+            btc_pct_from_entry = round(((btc_price - btc_entry) / btc_entry) * 100.0, 2)
+
+        vol_1h = self._fetch_latest_volume(sig["symbol"])
+
         snapshot = {
+            "event": "+".join(events),
             "timestamp": self._ts_to_utc(now),
             "timestamp_ts": now,
             "hours_after_entry": self._hours_since(alert_ts, now),
             "price": current,
             "pct_from_entry": round(cur_pct, 2),
             "btc_price": btc_price,
+            "btc_pct_from_signal_entry": btc_pct_from_entry,
+            "volume_1h": vol_1h,
+            "is_new_low": is_new_low,
+            "is_new_high": is_new_high,
+        }
+        journey.append(snapshot)
+
+        sig["_prev_highest"] = sig.get("highest_price", current)
+        sig["_prev_lowest"] = sig.get("lowest_price", current)
+
+    def _fetch_latest_volume(self, symbol: str) -> Optional[float]:
+        try:
+            klines = self._binance.get_closed_klines(symbol, "1h", 1)
+            if klines:
+                return klines[-1].get("quote_volume")
+        except Exception:
+            pass
+        return None
+
+    def _add_journey_event(self, sig: dict, event: str, now: float,
+                           btc_price: Optional[float]) -> None:
+        journey = sig.get("price_journey")
+        if journey is None:
+            journey = []
+            sig["price_journey"] = journey
+
+        entry = sig.get("entry_price", 0)
+        current = sig.get("current_price", entry)
+        cur_pct = ((current - entry) / entry) * 100.0 if entry > 0 else 0.0
+        btc_entry = sig.get("btc_price")
+        btc_pct = None
+        if btc_entry and btc_price and btc_entry > 0:
+            btc_pct = round(((btc_price - btc_entry) / btc_entry) * 100.0, 2)
+
+        snapshot = {
+            "event": event,
+            "timestamp": self._ts_to_utc(now),
+            "timestamp_ts": now,
+            "hours_after_entry": self._hours_since(sig["alert_time_ts"], now),
+            "price": current,
+            "pct_from_entry": round(cur_pct, 2),
+            "btc_price": btc_price,
+            "btc_pct_from_signal_entry": btc_pct,
+            "volume_1h": None,
+            "is_new_low": False,
+            "is_new_high": False,
         }
         journey.append(snapshot)
 
@@ -351,6 +451,15 @@ class SignalTracker:
                         outcome[f"{key}_max_drawdown_before"] = outcome.get("max_drawdown_pct", 0.0)
                         outcome[f"{key}_btc_price_at_hit"] = btc_at_check
 
+                        if outcome.get("btc_change_entry_to_tp") is None:
+                            btc_entry = sig.get("btc_price")
+                            if btc_entry and btc_at_check and btc_entry > 0:
+                                outcome["btc_change_entry_to_tp"] = round(
+                                    ((btc_at_check - btc_entry) / btc_entry) * 100.0, 2
+                                )
+
+                        self._add_journey_event(sig, f"tp_hit_{target}", now, btc_at_check)
+
                         alerts_to_send.append({
                             "type":          "take_profit",
                             "symbol":        sig["symbol"],
@@ -368,6 +477,8 @@ class SignalTracker:
                         )
 
                 sig["tp_sent"] = tp_sent
+
+                outcome["signal_type"] = self._classify_signal_type(sig)
 
                 if (
                     self._reversal_enabled
@@ -409,7 +520,7 @@ class SignalTracker:
 
     # ── signal type classification ────────────────────────────────────
 
-    def _classify_signal_type(self, sig: dict) -> str:
+    def _classify_signal_type(self, sig: dict, is_archiving: bool = False) -> str:
         outcome = sig.get("outcome", {})
         first_tp_hours = None
 
@@ -422,7 +533,7 @@ class SignalTracker:
                         first_tp_hours = hours
 
         if first_tp_hours is None:
-            return "failed"
+            return "failed" if is_archiving else "active"
         if first_tp_hours < 6:
             return "fast"
         if first_tp_hours <= 72:
@@ -440,6 +551,11 @@ class SignalTracker:
             active = []
             archived = 0
             newly_archived = []
+
+            try:
+                btc_exit = self._binance.get_mark_prices().get("BTCUSDT")
+            except Exception:
+                btc_exit = None
 
             for sig in signals:
                 age = now - sig["alert_time_ts"]
@@ -468,7 +584,23 @@ class SignalTracker:
                             pass
 
                     outcome = self._ensure_outcome(sig)
-                    outcome["signal_type"] = self._classify_signal_type(sig)
+                    outcome["signal_type"] = self._classify_signal_type(sig, is_archiving=True)
+                    outcome["signal_closed"] = True
+                    outcome["close_reason"] = "expired"
+                    outcome["close_time"] = sig["archived_time"]
+
+                    btc_entry = sig.get("btc_price")
+                    if btc_entry and btc_exit and btc_entry > 0:
+                        btc_chg = ((btc_exit - btc_entry) / btc_entry) * 100.0
+                        if btc_chg > 2.0:
+                            outcome["btc_trend_during_signal"] = "pumping"
+                        elif btc_chg < -2.0:
+                            outcome["btc_trend_during_signal"] = "dumping"
+                        else:
+                            outcome["btc_trend_during_signal"] = "ranging"
+
+                    sig.pop("_prev_highest", None)
+                    sig.pop("_prev_lowest", None)
 
                     history.append(sig)
                     newly_archived.append(sig)
