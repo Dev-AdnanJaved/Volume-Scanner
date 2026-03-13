@@ -317,6 +317,12 @@ class SignalTracker:
             alerts_to_send: list[dict] = []
             now = time.time()
 
+            try:
+                cached_prices = self._binance.get_mark_prices()
+                btc_at_check = cached_prices.get("BTCUSDT")
+            except Exception:
+                btc_at_check = None
+
             for sig in signals:
                 entry = sig.get("entry_price", 0)
                 if entry <= 0:
@@ -343,13 +349,7 @@ class SignalTracker:
                         outcome[f"{key}_hit_time"] = self._ts_to_utc(now)
                         outcome[f"{key}_hit_hours_after_entry"] = self._hours_since(sig["alert_time_ts"], now)
                         outcome[f"{key}_max_drawdown_before"] = outcome.get("max_drawdown_pct", 0.0)
-                        btc_now = sig.get("current_price", 0)
-                        try:
-                            prices_snapshot = self._binance.get_mark_prices()
-                            btc_now = prices_snapshot.get("BTCUSDT")
-                        except Exception:
-                            btc_now = None
-                        outcome[f"{key}_btc_price_at_hit"] = btc_now
+                        outcome[f"{key}_btc_price_at_hit"] = btc_at_check
 
                         alerts_to_send.append({
                             "type":          "take_profit",
