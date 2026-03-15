@@ -872,7 +872,7 @@ python export_csv.py --history-only       # only archived signals
 ### File write safety
 - **JSON files**: Written to `.tmp` file first, then atomically renamed via `tmp.replace(path)`
 - **Gzip files**: Written to `.tmp.gz` first, then atomically renamed
-- **Archive atomicity**: Gzip is written FIRST. If it fails, active signals are NOT modified (no data loss).
+- **Archive atomicity intent**: `archive_expired()` wraps the gzip write in `try/except` and is designed to keep signals active on failure. However, as noted in Section 14, `_save_gzip()` catches `IOError` without re-raising, so this safety net does not fully work in the current code. See Section 14 for details.
 
 ---
 
@@ -896,11 +896,11 @@ python export_csv.py --history-only       # only archived signals
 | 429 | Retry | `Retry-After` header (default 60s) |
 | 418 | IP auto-banned, retry | 120 seconds |
 | 451 | Geo/legal block, retry | 300 seconds |
-| 5xx | Server error, retry | Exponential backoff: 2, 4, 8 seconds |
-| Timeout | Retry | Exponential backoff: 2, 4, 8 seconds |
-| Connection error | Retry | Exponential backoff: 2, 4, 8 seconds |
+| 5xx | Server error, retry | `2^attempt` seconds (2s after 1st fail, 4s after 2nd) |
+| Timeout | Retry | `2^attempt` seconds (2s after 1st fail, 4s after 2nd) |
+| Connection error | Retry | `2^attempt` seconds (2s after 1st fail, 4s after 2nd) |
 
-All retries: maximum 3 attempts. After 3 failures, raises `RuntimeError`.
+All retries: maximum 3 attempts (attempts 1, 2, 3). Sleep only happens between retries (after attempt 1 and 2, not after 3). After 3 failures, raises `RuntimeError`.
 
 ### API endpoints used and their weights
 
