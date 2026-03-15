@@ -113,6 +113,7 @@ Before scanning individual symbols, two bulk API calls are made once per cycle:
 - **What it returns per symbol**:
   - `price_change_pct` — 24h price change percentage
   - `quote_volume_24h` — 24h volume in USDT
+  - `volume_24h` — 24h volume in base coin units
   - `high_price` — 24h high price
 - **Used for**: Filter 3 (24h price change check) and additional data (liquidity check)
 - **Failure behavior**: Logs warning, continues with empty dict
