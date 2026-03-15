@@ -744,8 +744,12 @@ class TelegramCommandListener:
             self._send(chat_id, "🔍 <b>VALIDATE</b>\n\nNo active signals to check.")
             return
 
-        issues: list = []
         tp_targets = self._tracker.tp_targets
+
+        cat_additional: list = []
+        cat_signal: list = []
+        cat_volume: list = []
+        cat_outcome: list = []
 
         for s in signals:
             sym = s.get("symbol", "???")
@@ -753,47 +757,65 @@ class TelegramCommandListener:
             out = s.get("outcome", {})
 
             if not ad:
-                issues.append(f"{sym}: additional_data is empty")
+                cat_additional.append(f"{sym}: additional_data is empty")
             else:
                 if ad.get("oi_growth_ratio") is None:
-                    issues.append(f"{sym}: oi_growth_ratio is null")
+                    cat_additional.append(f"{sym}: oi_growth_ratio is null")
                 if ad.get("funding_rate") is None:
-                    issues.append(f"{sym}: funding_rate is null")
+                    cat_additional.append(f"{sym}: funding_rate is null")
                 if ad.get("rvol_20") is None:
-                    issues.append(f"{sym}: rvol_20 is null")
+                    cat_additional.append(f"{sym}: rvol_20 is null")
                 if ad.get("vol_24h_usdt") is None:
-                    issues.append(f"{sym}: vol_24h_usdt missing")
+                    cat_additional.append(f"{sym}: vol_24h_usdt missing")
                 if ad.get("vol_24h_base") is None:
-                    issues.append(f"{sym}: vol_24h_base missing")
+                    cat_additional.append(f"{sym}: vol_24h_base missing")
 
             if "high_breakout_warning" not in s:
-                issues.append(f"{sym}: high_breakout_warning missing")
+                cat_signal.append(f"{sym}: high_breakout_warning missing")
 
-            if s.get("vol_candle_1_base") is None:
-                issues.append(f"{sym}: vol_candle_1_base missing")
+            for n in (1, 2, 3):
+                if s.get(f"vol_candle_{n}_base") is None:
+                    cat_volume.append(f"{sym}: vol_candle_{n}_base missing")
 
             for tp in tp_targets:
                 key = f"tp{tp}_hit"
                 if out.get(key) is None:
-                    issues.append(f"{sym}: {key} missing from outcome")
+                    cat_outcome.append(f"{sym}: {key} missing from outcome")
                     break
 
-        clean = len(signals) - len(set(i.split(":")[0] for i in issues))
+        all_issues = cat_additional + cat_signal + cat_volume + cat_outcome
+        problem_syms = set()
+        for i in all_issues:
+            problem_syms.add(i.split(":")[0])
+        clean = len(signals) - len(problem_syms)
+
         lines = [
             "🔍 <b>VALIDATE</b>",
             "",
             f"📊 Total signals: {len(signals)}",
             f"✅ Clean: {clean}",
-            f"⚠️ With issues: {len(signals) - clean}",
+            f"⚠️ With issues: {len(problem_syms)}",
         ]
 
-        if issues:
-            lines.append("")
-            lines.append(f"<b>{len(issues)} issue(s) found:</b>")
-            for i in issues[:50]:
-                lines.append(f"  • {i}")
-            if len(issues) > 50:
-                lines.append(f"  ... and {len(issues) - 50} more")
+        if all_issues:
+            shown = 0
+            limit = 50
+            for label, cat in [
+                ("📋 Additional Data", cat_additional),
+                ("📌 Signal Fields", cat_signal),
+                ("📊 Volume Fields", cat_volume),
+                ("🎯 Outcome Fields", cat_outcome),
+            ]:
+                if not cat or shown >= limit:
+                    continue
+                lines.append("")
+                lines.append(f"<b>{label} ({len(cat)}):</b>")
+                for i in cat:
+                    if shown >= limit:
+                        lines.append(f"  ... truncated")
+                        break
+                    lines.append(f"  • {i}")
+                    shown += 1
         else:
             lines.append("")
             lines.append("🎉 All signals look clean!")
