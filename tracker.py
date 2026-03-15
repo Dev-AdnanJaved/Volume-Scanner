@@ -19,6 +19,7 @@ Responsibilities:
 
 from __future__ import annotations
 
+import gzip
 import json
 import logging
 import os
@@ -772,11 +773,48 @@ class SignalTracker:
 
     # ── archive expired ──────────────────────────────────────────────
 
+    def _monthly_gz_path(self, ts: float) -> Path:
+        dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+        return self._data_dir / f"signals_{dt.year}_{dt.month:02d}.json.gz"
+
+    def _load_gzip(self, path: Path) -> list:
+        if not path.exists():
+            return []
+        try:
+            with gzip.open(path, "rt", encoding="utf-8") as fh:
+                data = json.load(fh)
+                return data if isinstance(data, list) else []
+        except (json.JSONDecodeError, IOError, OSError) as exc:
+            logger.error("Failed to read gzip %s: %s", path, exc)
+            return []
+
+    def _save_gzip(self, path: Path, data: list) -> None:
+        tmp = path.with_suffix(".tmp.gz")
+        try:
+            with gzip.open(tmp, "wt", encoding="utf-8") as fh:
+                json.dump(data, fh, separators=(",", ":"))
+            tmp.replace(path)
+        except IOError as exc:
+            logger.error("Failed to write gzip %s: %s", path, exc)
+
+    def _append_to_monthly_gz(self, signals: list) -> None:
+        by_month: Dict[Path, list] = {}
+        for sig in signals:
+            ts = sig.get("alert_time_ts", time.time())
+            gz_path = self._monthly_gz_path(ts)
+            by_month.setdefault(gz_path, []).append(sig)
+
+        for gz_path, sigs in by_month.items():
+            existing = self._load_gzip(gz_path)
+            existing.extend(sigs)
+            self._save_gzip(gz_path, existing)
+            logger.info("Appended %d signal(s) to %s (total: %d)",
+                        len(sigs), gz_path.name, len(existing))
+
     def archive_expired(self) -> int:
         now = time.time()
         with self._lock:
             signals = self._load(self._signals_file)
-            history = self._load(self._history_file)
 
             active = []
             archived = 0
@@ -832,15 +870,18 @@ class SignalTracker:
                     sig.pop("_prev_highest", None)
                     sig.pop("_prev_lowest", None)
 
-                    history.append(sig)
                     newly_archived.append(sig)
                     archived += 1
                 else:
                     active.append(sig)
 
             if archived > 0:
+                try:
+                    self._append_to_monthly_gz(newly_archived)
+                except Exception as exc:
+                    logger.error("CRITICAL: gzip archive write failed, keeping signals active: %s", exc)
+                    return 0
                 self._save(self._signals_file, active)
-                self._save(self._history_file, history)
 
         if archived > 0:
             self._add_to_pending(newly_archived)
@@ -924,7 +965,10 @@ class SignalTracker:
 
     def get_history(self) -> List[dict]:
         with self._lock:
-            return self._load(self._history_file)
+            history = self._load(self._history_file)
+            for gz_file in sorted(self._data_dir.glob("signals_*.json.gz")):
+                history.extend(self._load_gzip(gz_file))
+            return history
 
     def get_completed_signals(self, min_age_seconds: float) -> List[dict]:
         """Return archived signals that have been tracked for at least min_age_seconds."""

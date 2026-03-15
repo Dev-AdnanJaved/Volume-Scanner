@@ -7,6 +7,7 @@ Commands:
   /summary         — win rate, averages, best/worst
   /active          — quick list of tracked symbols
   /detailed_report — sends JSON file of completed signals (≥7 days old) with all data
+  /export_csv      — flat CSV of all signals (active + archived) for analysis
   /help            — command reference
 """
 
@@ -223,6 +224,7 @@ class TelegramCommandListener:
             "/active":          lambda: self._cmd_active(chat_id),
             "/export":          lambda: self._cmd_export(chat_id),
             "/detailed_report": lambda: self._cmd_detailed_report(chat_id),
+            "/export_csv":      lambda: self._cmd_export_csv(chat_id),
             "/help":            lambda: self._cmd_help(chat_id),
             "/start":           lambda: self._cmd_help(chat_id),
         }
@@ -689,6 +691,49 @@ class TelegramCommandListener:
         else:
             logger.info("Active signals export sent: %d signals", len(signals))
 
+    # ── /export_csv ──────────────────────────────────────────────────
+
+    def _cmd_export_csv(self, chat_id: str) -> None:
+        self._send(chat_id, "⏳ Building flat CSV export…")
+
+        try:
+            from export_csv import load_all_signals, build_csv
+
+            signals = load_all_signals(active=True, history=True)
+            if not signals:
+                self._send(chat_id, "📭 No signals found (active or archived).")
+                return
+
+            now_ts = int(time.time())
+            now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            tmp_path = f"/tmp/signals_flat_{now_str}_{now_ts}.csv"
+
+            count = build_csv(signals, tmp_path)
+
+            file_size = os.path.getsize(tmp_path)
+            size_str = f"{file_size / 1024:.1f} KB" if file_size < 1_048_576 else f"{file_size / 1_048_576:.1f} MB"
+
+            caption = (
+                f"📊 Flat CSV Export\n"
+                f"Signals: {count}\n"
+                f"Size: {size_str}\n"
+                f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
+            )
+            success = self._send_document(chat_id, tmp_path, caption)
+
+            try:
+                os.remove(tmp_path)
+            except Exception:
+                pass
+
+            if not success:
+                self._send(chat_id, "❌ Failed to send CSV file.")
+            else:
+                logger.info("CSV export sent: %d signals, %s", count, size_str)
+        except Exception as exc:
+            logger.error("CSV export failed: %s", exc)
+            self._send(chat_id, f"❌ CSV export failed: {exc}")
+
     # ── /help ────────────────────────────────────────────────────────
 
     def _cmd_help(self, chat_id: str) -> None:
@@ -702,6 +747,7 @@ class TelegramCommandListener:
             "/detailed_report — JSON file of completed signals (≥7 days)\n"
             "                   Includes all main + additional data,\n"
             "                   peak, lowest, exit prices\n"
+            "/export_csv — Flat CSV of all signals for analysis\n"
             "/help — This message\n\n"
             f"📡 Tracking window: {self._tracker.max_age_hours}h\n"
             "🏔 Prices update every 5 min\n"

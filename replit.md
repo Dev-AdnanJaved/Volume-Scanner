@@ -15,7 +15,9 @@ A Python bot that monitors Binance USDT-M perpetual futures pairs for unusual tr
 - Event-based price journey (new high/low, below entry, 4h checkpoint, TP hit, BTC >2% move) with btc_pct_from_signal_entry, volume_1h, is_new_low, is_new_high
 - Live signal_type classification (active → fast/slow/delayed as TPs are hit); failed only at archive
 - high_breakout_warning stored at signal root level only (not duplicated in outcome)
-- Telegram bot commands for interactive queries
+- Monthly gzip-compressed JSON archives (data/signals_YYYY_MM.json.gz) — ~70-80% size reduction
+- Flat CSV export (export_csv.py) flattening all fields into one row per signal for analysis
+- Telegram bot commands for interactive queries (/report, /summary, /active, /export, /export_csv, /detailed_report)
 - Rate limit handling and caching
 
 ## Architecture
@@ -29,6 +31,7 @@ A Python bot that monitors Binance USDT-M perpetual futures pairs for unusual tr
 | `market_cap.py` | CoinGecko market cap fetch and caching |
 | `tracker.py` | Background price updater + take-profit alerts |
 | `bot_commands.py` | Telegram bot command handler |
+| `export_csv.py` | Flat CSV export — flattens all signal data into one row per signal |
 | `config.json` | Configuration file (thresholds, scan settings) |
 
 ## Configuration
