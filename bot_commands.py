@@ -223,6 +223,7 @@ class TelegramCommandListener:
             "/summary":         lambda: self._cmd_summary(chat_id),
             "/active":          lambda: self._cmd_active(chat_id),
             "/export":          lambda: self._cmd_export(chat_id),
+            "/coin":            lambda: self._cmd_coin(chat_id, args),
             "/detailed_report": lambda: self._cmd_detailed_report(chat_id),
             "/export_csv":      lambda: self._cmd_export_csv(chat_id),
             "/validate":        lambda: self._cmd_validate(chat_id),
@@ -692,6 +693,74 @@ class TelegramCommandListener:
         else:
             logger.info("Active signals export sent: %d signals", len(signals))
 
+    # ── /coin ──────────────────────────────────────────────────────────
+
+    def _cmd_coin(self, chat_id: str, args: list) -> None:
+        if not args:
+            self._send(chat_id, "Usage: /coin ETH  or  /coin ETHUSDT")
+            return
+
+        sym = args[0].upper()
+        if not sym.endswith("USDT"):
+            sym += "USDT"
+
+        try:
+            prices = self._binance.get_mark_prices()
+            self._tracker.apply_prices(prices)
+        except Exception:
+            prices = {}
+
+        signals = self._tracker.get_active_signals()
+        matches = [s for s in signals if s["symbol"] == sym]
+
+        if not matches:
+            self._send(chat_id, f"📭 No active signal for <b>{sym}</b>")
+            return
+
+        for sig in matches:
+            entry = sig.get("entry_price", 0)
+            current = prices.get(sym, sig.get("current_price", 0))
+            highest = sig.get("highest_price", entry)
+            lowest = sig.get("lowest_price", entry)
+            if current > highest:
+                highest = current
+            sig["current_price"] = current
+            sig["highest_price"] = highest
+            if entry > 0:
+                sig["current_pct"] = round(((current - entry) / entry) * 100, 2)
+                sig["peak_pct"] = round(((highest - entry) / entry) * 100, 2)
+                sig["lowest_pct"] = round(((lowest - entry) / entry) * 100, 2) if lowest > 0 else None
+            sig.pop("_prev_highest", None)
+            sig.pop("_prev_lowest", None)
+
+        data = matches[0] if len(matches) == 1 else matches
+
+        now_ts = int(time.time())
+        tmp_path = f"/tmp/{sym}_{now_ts}.json"
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+        except Exception as exc:
+            self._send(chat_id, f"❌ Failed to write file: {exc}")
+            return
+
+        caption = (
+            f"📌 {sym} Signal Export\n"
+            f"Signals: {len(matches)}\n"
+            f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
+        )
+        success = self._send_document(chat_id, tmp_path, caption)
+
+        try:
+            os.remove(tmp_path)
+        except Exception:
+            pass
+
+        if not success:
+            self._send(chat_id, "❌ Failed to send file. Check bot logs.")
+        else:
+            logger.info("Coin export sent for %s: %d signal(s)", sym, len(matches))
+
     # ── /export_csv ──────────────────────────────────────────────────
 
     def _cmd_export_csv(self, chat_id: str) -> None:
@@ -832,6 +901,7 @@ class TelegramCommandListener:
             "/summary — Win rates, averages, best/worst\n"
             "/active — Quick list of tracked signals\n"
             "/export — JSON file of all currently active signals\n"
+            "/coin ETH — JSON file for a specific coin\n"
             "/detailed_report — JSON file of completed signals (≥7 days)\n"
             "                   Includes all main + additional data,\n"
             "                   peak, lowest, exit prices\n"

@@ -821,6 +821,14 @@ The command listener runs as a daemon thread, polling Telegram for messages via 
 - Sends as Telegram document attachment
 - Caption: signal count + file size + generated timestamp (e.g., "Flat CSV Export\nSignals: 20\nSize: 45.2 KB\nGenerated: 2026-03-15 08:00 UTC")
 
+#### `/coin ETH` — Single Coin JSON Export
+- Accepts base name (`ETH`) or full symbol (`ETHUSDT`) — auto-appends USDT if missing
+- Filters active signals for the specified coin
+- Updates prices before export for fresh current_price/highest_price
+- Sends as Telegram document (JSON file) with signal count and timestamp
+- If single signal: JSON is the signal object directly; if multiple: JSON is an array
+- If coin not found: sends "No active signal for ETHUSDT"
+
 #### `/validate` — Data Integrity Check
 - Checks all active signals for data completeness
 - Validates: additional_data not empty, oi_growth_ratio, funding_rate, rvol_20, vol_24h_usdt, vol_24h_base, high_breakout_warning, vol_candle_1_base, outcome TP fields
