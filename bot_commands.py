@@ -598,10 +598,9 @@ class TelegramCommandListener:
                 "outcome":             sig.get("outcome", {}),
                 "price_journey":       sig.get("price_journey", []),
             }
-            for tp in self._tracker.tp_targets:
-                snap_key = f"tp{tp}_snapshot"
-                if sig.get(snap_key):
-                    record[snap_key] = sig[snap_key]
+            for k, v in sig.items():
+                if k.endswith("_snapshot") and k.startswith("tp") and isinstance(v, dict):
+                    record[k] = v
             report.append(record)
 
         now_ts = int(time.time())
