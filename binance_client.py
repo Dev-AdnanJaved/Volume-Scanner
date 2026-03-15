@@ -179,6 +179,7 @@ class BinanceClient:
             result[d["symbol"]] = {
                 "price_change_pct": float(d.get("priceChangePercent", 0)),
                 "quote_volume_24h": float(d.get("quoteVolume", 0)),
+                "volume_24h":       float(d.get("volume", 0)),
                 "high_price":       float(d.get("highPrice", 0)),
             }
         return result

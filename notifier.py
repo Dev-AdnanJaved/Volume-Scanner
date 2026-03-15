@@ -135,6 +135,9 @@ class TelegramNotifier:
         v1 = d.get("vol_candle_1_fmt", "?")
         v2 = d.get("vol_candle_2_fmt", "?")
         v3 = d.get("vol_candle_3_fmt", "?")
+        bv1 = d.get("vol_candle_1_base_fmt", "?")
+        bv2 = d.get("vol_candle_2_base_fmt", "?")
+        bv3 = d.get("vol_candle_3_base_fmt", "?")
         rvol = d.get("rvol", 0)
         alert_time = d.get("alert_time", "N/A")
         cooldown = d.get("cooldown_hours", 12)
@@ -144,6 +147,8 @@ class TelegramNotifier:
 
         header = "⚠️ <b>BREAKOUT SIGNAL — HIGH BREAKOUT</b>" if high_brk else "🚨 <b>BREAKOUT SIGNAL</b>"
 
+        base_coin = symbol.replace("USDT", "").replace("BUSD", "")
+
         lines = [
             header,
             f"{'━' * 28}",
@@ -152,7 +157,8 @@ class TelegramNotifier:
             f"💵 <b>Price:</b>  ${price}",
             "",
             f"1️⃣ <b>Breakout:</b>  +{brk_margin:.2f}% above 24h high",
-            f"2️⃣ <b>Volume:</b>  {v1} → {v2} → {v3}  ({rvol:.1f}x avg)",
+            f"2️⃣ <b>Vol USDT:</b>  {v1} → {v2} → {v3}  ({rvol:.1f}x avg)",
+            f"    <b>Vol {base_coin}:</b>  {bv1} → {bv2} → {bv3}",
             f"3️⃣ <b>24h Change:</b>  {chg_icon} {price_chg:+.1f}%",
             "",
         ]

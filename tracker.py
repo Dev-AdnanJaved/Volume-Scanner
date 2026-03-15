@@ -350,7 +350,7 @@ class SignalTracker:
         if btc_entry and btc_price and btc_entry > 0:
             btc_pct_from_entry = round(((btc_price - btc_entry) / btc_entry) * 100.0, 2)
 
-        vol_1h = self._fetch_latest_volume(sig["symbol"])
+        vol_1h, vol_1h_base = self._fetch_latest_volume(sig["symbol"])
 
         snapshot = {
             "event": "+".join(events),
@@ -362,6 +362,7 @@ class SignalTracker:
             "btc_price": btc_price,
             "btc_pct_from_signal_entry": btc_pct_from_entry,
             "volume_1h": vol_1h,
+            "volume_1h_base": vol_1h_base,
             "is_new_low": is_new_low,
             "is_new_high": is_new_high,
         }
@@ -371,14 +372,14 @@ class SignalTracker:
         sig["_prev_highest"] = sig.get("highest_price", current)
         sig["_prev_lowest"] = sig.get("lowest_price", current)
 
-    def _fetch_latest_volume(self, symbol: str) -> Optional[float]:
+    def _fetch_latest_volume(self, symbol: str):
         try:
             klines = self._binance.get_closed_klines(symbol, "1h", 1)
             if klines:
-                return klines[-1].get("quote_volume")
+                return klines[-1].get("quote_volume"), klines[-1].get("volume")
         except Exception:
             pass
-        return None
+        return None, None
 
     @staticmethod
     def _ema(values: List[float], period: int) -> float:
@@ -456,6 +457,9 @@ class SignalTracker:
                     avg_b = sum(c["quote_volume"] for c in baseline) / len(baseline)
                     snapshot["rvol_20"] = round(last["quote_volume"] / avg_b, 2) if avg_b > 0 else None
                     snapshot["vol_baseline_avg"] = round(avg_b, 2)
+            if last:
+                snapshot["volume_1h"] = last.get("quote_volume")
+                snapshot["volume_1h_base"] = last.get("volume")
         except Exception:
             pass
 
@@ -496,6 +500,8 @@ class SignalTracker:
                 vol_24h = ticker.get("quote_volume_24h", 0)
                 snapshot["vol_24h_usdt"] = round(vol_24h, 2)
                 snapshot["vol_24h_above_50m"] = vol_24h >= 50_000_000
+                vol_24h_base = ticker.get("volume_24h", 0)
+                snapshot["vol_24h_base"] = round(vol_24h_base, 2)
         except Exception:
             pass
 
@@ -583,7 +589,7 @@ class SignalTracker:
         if btc_entry and btc_price and btc_entry > 0:
             btc_pct = round(((btc_price - btc_entry) / btc_entry) * 100.0, 2)
 
-        vol_1h = self._fetch_latest_volume(sig["symbol"])
+        vol_1h, vol_1h_base = self._fetch_latest_volume(sig["symbol"])
 
         snapshot = {
             "event": event,
@@ -595,6 +601,7 @@ class SignalTracker:
             "btc_price": btc_price,
             "btc_pct_from_signal_entry": btc_pct,
             "volume_1h": vol_1h,
+            "volume_1h_base": vol_1h_base,
             "is_new_low": False,
             "is_new_high": False,
         }

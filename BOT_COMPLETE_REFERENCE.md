@@ -157,9 +157,15 @@ For each non-excluded, non-tracked, non-cooldown symbol, the scanner runs `_anal
 | `vol_candle_1` | Raw USDT volume of candle [-3] (oldest) |
 | `vol_candle_2` | Raw USDT volume of candle [-2] (middle) |
 | `vol_candle_3` | Raw USDT volume of candle [-1] (newest) |
-| `vol_candle_1_fmt` | Formatted string (e.g., "$4.52M") |
-| `vol_candle_2_fmt` | Formatted string |
-| `vol_candle_3_fmt` | Formatted string |
+| `vol_candle_1_fmt` | Formatted USDT string (e.g., "$4.52M") |
+| `vol_candle_2_fmt` | Formatted USDT string |
+| `vol_candle_3_fmt` | Formatted USDT string |
+| `vol_candle_1_base` | Raw base (coin) volume of candle [-3] |
+| `vol_candle_2_base` | Raw base (coin) volume of candle [-2] |
+| `vol_candle_3_base` | Raw base (coin) volume of candle [-1] |
+| `vol_candle_1_base_fmt` | Formatted coin volume (e.g., "1.20M") |
+| `vol_candle_2_base_fmt` | Formatted coin volume |
+| `vol_candle_3_base_fmt` | Formatted coin volume |
 | `vol_ratio` | Rounded to 2 decimals (e.g., 3.41) |
 
 **Why this filter**: Ensures money is accelerating into the asset — not just a spike but a building trend.
@@ -235,7 +241,8 @@ After ALL 3 main filters pass, the scanner collects extra context data. Each pie
 | Field | Type | Description |
 |-------|------|-------------|
 | `vol_24h_usdt` | float | Total 24h trading volume in USDT |
-| `vol_24h_above_50m` | bool | `True` if 24h volume ≥ $50,000,000 |
+| `vol_24h_base` | float | Total 24h trading volume in base coin units |
+| `vol_24h_above_50m` | bool | `True` if 24h USDT volume ≥ $50,000,000 |
 
 **Why**: Low-liquidity coins have wider spreads and higher slippage risk.
 
@@ -314,9 +321,15 @@ When a signal passes all 3 filters, a signal record is created and saved to `dat
 | `vol_candle_1` | float | Signal creation | Raw USDT volume of candle [-3] |
 | `vol_candle_2` | float | Signal creation | Raw USDT volume of candle [-2] |
 | `vol_candle_3` | float | Signal creation | Raw USDT volume of candle [-1] |
-| `vol_candle_1_fmt` | string | Signal creation | Formatted, e.g., "$4.52M" |
-| `vol_candle_2_fmt` | string | Signal creation | Formatted |
-| `vol_candle_3_fmt` | string | Signal creation | Formatted |
+| `vol_candle_1_fmt` | string | Signal creation | Formatted USDT, e.g., "$4.52M" |
+| `vol_candle_2_fmt` | string | Signal creation | Formatted USDT |
+| `vol_candle_3_fmt` | string | Signal creation | Formatted USDT |
+| `vol_candle_1_base` | float | Signal creation | Raw base (coin) volume of candle [-3] |
+| `vol_candle_2_base` | float | Signal creation | Raw base (coin) volume of candle [-2] |
+| `vol_candle_3_base` | float | Signal creation | Raw base (coin) volume of candle [-1] |
+| `vol_candle_1_base_fmt` | string | Signal creation | Formatted coin volume, e.g., "1.20M" |
+| `vol_candle_2_base_fmt` | string | Signal creation | Formatted coin volume |
+| `vol_candle_3_base_fmt` | string | Signal creation | Formatted coin volume |
 | `vol_ratio` | float | Signal creation | newest_vol / oldest_vol, e.g., 3.41 |
 | `candle_colors` | list[string] | Signal creation | `["green", "red", "green"]` — color of each of the 3 volume candles. green = close ≥ open, red = close < open |
 | `rvol` | float | Signal creation | RVOL calculated in scanner (same as additional_data.rvol_20 but calculated separately) |
@@ -375,7 +388,8 @@ When a signal fires, a Telegram message is immediately sent. The format:
 💵 Price:  $3500.12345678
 
 1️⃣ Breakout:  +1.85% above 24h high
-2️⃣ Volume:  $2.50M → $4.00M → $8.20M  (3.3x avg)
+2️⃣ Vol USDT:  $2.50M → $4.00M → $8.20M  (3.3x avg)
+    Vol ETH:  720 → 1K → 2K
 3️⃣ 24h Change:  🟢 +5.2%
 
 🕐 Time:  2026-03-15 08:00:00 UTC
@@ -391,7 +405,8 @@ When a signal fires, a Telegram message is immediately sent. The format:
 💵 Price:  $3500.12345678
 
 1️⃣ Breakout:  +7.50% above 24h high
-2️⃣ Volume:  $2.50M → $4.00M → $8.20M  (3.3x avg)
+2️⃣ Vol USDT:  $2.50M → $4.00M → $8.20M  (3.3x avg)
+    Vol ETH:  720 → 1K → 2K
 3️⃣ 24h Change:  🟢 +5.2%
 
 ⚠️ Warning: Breakout margin 7.50% > 5% — enter with caution
@@ -521,12 +536,13 @@ The price journey is NOT recorded every 5 minutes. It only records snapshots whe
 | `pct_from_entry` | float | `((current - entry) / entry) * 100` |
 | `btc_price` | float or None | BTCUSDT mark price at this moment |
 | `btc_pct_from_signal_entry` | float or None | BTC's % change since signal entry |
-| `volume_1h` | float or None | Latest closed 1h candle's quote_volume (freshly fetched via separate API call) |
+| `volume_1h` | float or None | Latest closed 1h candle's USDT quote_volume (freshly fetched via separate API call) |
+| `volume_1h_base` | float or None | Latest closed 1h candle's base (coin) volume |
 | `is_new_low` | bool | Whether this snapshot represents a new lowest price |
 | `is_new_high` | bool | Whether this snapshot represents a new highest price |
 
 ### Volume fetch for journey
-Each journey snapshot triggers a fresh API call: `GET /fapi/v1/klines` with `symbol`, `interval="1h"`, `limit=1` to get the latest closed 1h candle's `quote_volume`. This is the `volume_1h` field.
+Each journey snapshot triggers a fresh API call: `GET /fapi/v1/klines` with `symbol`, `interval="1h"`, `limit=1` to get the latest closed 1h candle's `quote_volume` (USDT) and `volume` (base coin). These become the `volume_1h` and `volume_1h_base` fields.
 
 ### Journey sorting
 After each new snapshot is added, the entire journey list is sorted by `timestamp_ts` ascending.
@@ -593,8 +609,11 @@ Each TP snapshot is a complete market re-scan at the moment of the TP hit. It mi
 | `oi_growth_ratio` | float | Current growth / abs(avg growth) |
 | `funding_rate` | float | Current funding rate × 100 (%) |
 | `funding_in_ideal_range` | bool | Whether funding is in -0.02% to 0.15% range |
+| `volume_1h` | float or None | Latest 1h candle USDT quote_volume |
+| `volume_1h_base` | float or None | Latest 1h candle base (coin) volume |
 | `vol_24h_usdt` | float | 24h trading volume in USDT (from cached tickers) |
-| `vol_24h_above_50m` | bool | Whether 24h volume ≥ $50M |
+| `vol_24h_base` | float | 24h trading volume in base coin units (from cached tickers) |
+| `vol_24h_above_50m` | bool | Whether 24h USDT volume ≥ $50M |
 | `ema50_4h` | float | 4h EMA50 value |
 | `price_above_ema50_4h` | bool | Whether current price > EMA50 |
 | `ema50_distance_pct` | float or None | % distance from EMA50 |
@@ -839,7 +858,7 @@ Flattens every signal (active + all archived) into one CSV row per signal, with 
 
 ### Column ordering
 Columns appear in this order:
-1. **Priority fields**: symbol, alert_time, alert_time_ts, timeframe, entry_price, current_price, highest_price, lowest_price, peak_pct, lowest_pct, exit_pct, exit_price, breakout_margin_pct, high_breakout_warning, high_24h, price_change_24h, vol_candle_1/2/3, vol_candle_1/2/3_fmt, vol_ratio, rvol, candle_colors, btc_price, candle_time
+1. **Priority fields**: symbol, alert_time, alert_time_ts, timeframe, entry_price, current_price, highest_price, lowest_price, peak_pct, lowest_pct, exit_pct, exit_price, breakout_margin_pct, high_breakout_warning, high_24h, price_change_24h, vol_candle_1/2/3, vol_candle_1/2/3_fmt, vol_candle_1/2/3_base, vol_candle_1/2/3_base_fmt, vol_ratio, rvol, candle_colors, btc_price, candle_time
 2. **Additional data** (`add_*`): sorted alphabetically
 3. **Outcome** (`out_*`): sorted alphabetically
 4. **TP snapshots** (`tp{N}_*`): sorted by TP level (5, 10, 20, 30, 50, 75, 100) then by field name

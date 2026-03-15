@@ -151,6 +151,8 @@ def build_csv(signals: list, output_path: str) -> int:
         "price_change_24h",
         "vol_candle_1", "vol_candle_2", "vol_candle_3",
         "vol_candle_1_fmt", "vol_candle_2_fmt", "vol_candle_3_fmt",
+        "vol_candle_1_base", "vol_candle_2_base", "vol_candle_3_base",
+        "vol_candle_1_base_fmt", "vol_candle_2_base_fmt", "vol_candle_3_base_fmt",
         "vol_ratio", "rvol", "candle_colors",
         "btc_price", "candle_time",
     ]

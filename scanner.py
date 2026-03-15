@@ -107,6 +107,16 @@ class Scanner:
         return f"${vol:.0f}"
 
     @staticmethod
+    def _fmt_vol_count(vol: float) -> str:
+        if vol >= 1e9:
+            return f"{vol / 1e9:.1f}B"
+        if vol >= 1e6:
+            return f"{vol / 1e6:.2f}M"
+        if vol >= 1e3:
+            return f"{vol / 1e3:.0f}K"
+        return f"{vol:.0f}"
+
+    @staticmethod
     def _ema(values: List[float], period: int) -> float:
         """Calculate EMA for a list of values."""
         if len(values) < period:
@@ -260,6 +270,7 @@ class Scanner:
             return None
 
         vol_vals = [self._fmt_vol_usd(c["quote_volume"]) for c in consec]
+        base_vol_vals = [self._fmt_vol_count(c["volume"]) for c in consec]
         logger.info("%s  ✅ Consecutive volume: %s (ratio %.2fx)", symbol, " → ".join(vol_vals), vol_ratio)
 
         # ── FILTER 3: 24h price change cap ───────────────────────────
@@ -313,6 +324,12 @@ class Scanner:
             "vol_candle_1_fmt":  vol_vals[0],
             "vol_candle_2_fmt":  vol_vals[1],
             "vol_candle_3_fmt":  vol_vals[2],
+            "vol_candle_1_base":     consec[0]["volume"],
+            "vol_candle_2_base":     consec[1]["volume"],
+            "vol_candle_3_base":     consec[2]["volume"],
+            "vol_candle_1_base_fmt": base_vol_vals[0],
+            "vol_candle_2_base_fmt": base_vol_vals[1],
+            "vol_candle_3_base_fmt": base_vol_vals[2],
             "vol_ratio":         round(vol_ratio, 2),
             "candle_colors":     candle_colors,
             "rvol":              rvol,
@@ -392,6 +409,8 @@ class Scanner:
             vol_24h = ticker.get("quote_volume_24h", 0)
             data["vol_24h_usdt"] = round(vol_24h, 2)
             data["vol_24h_above_50m"] = vol_24h >= 50_000_000
+            vol_24h_base = ticker.get("volume_24h", 0)
+            data["vol_24h_base"] = round(vol_24h_base, 2)
         except Exception:
             pass
 
