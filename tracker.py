@@ -796,6 +796,7 @@ class SignalTracker:
             tmp.replace(path)
         except IOError as exc:
             logger.error("Failed to write gzip %s: %s", path, exc)
+            raise
 
     def _append_to_monthly_gz(self, signals: list) -> None:
         by_month: Dict[Path, list] = {}
@@ -858,14 +859,23 @@ class SignalTracker:
                     outcome["close_time"] = sig["archived_time"]
 
                     btc_entry = sig.get("btc_price")
-                    if btc_entry and btc_exit and btc_entry > 0:
-                        btc_chg = ((btc_exit - btc_entry) / btc_entry) * 100.0
-                        if btc_chg > 2.0:
-                            outcome["btc_trend_during_signal"] = "pumping"
-                        elif btc_chg < -2.0:
-                            outcome["btc_trend_during_signal"] = "dumping"
-                        else:
-                            outcome["btc_trend_during_signal"] = "ranging"
+                    if btc_entry and btc_entry > 0:
+                        btc_ref = None
+                        for tp in self._tp_targets:
+                            bp = outcome.get(f"tp{tp}_btc_price_at_hit")
+                            if bp:
+                                btc_ref = bp
+                                break
+                        if btc_ref is None:
+                            btc_ref = btc_exit
+                        if btc_ref:
+                            btc_chg = ((btc_ref - btc_entry) / btc_entry) * 100.0
+                            if btc_chg > 2.0:
+                                outcome["btc_trend_during_signal"] = "pumping"
+                            elif btc_chg < -2.0:
+                                outcome["btc_trend_during_signal"] = "dumping"
+                            else:
+                                outcome["btc_trend_during_signal"] = "ranging"
 
                     sig.pop("_prev_highest", None)
                     sig.pop("_prev_lowest", None)

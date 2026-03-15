@@ -465,7 +465,7 @@ The outcome block tracks detailed performance metrics. It is initialized when a 
 | `close_reason` | string | None | At archive only | Always "expired" (currently the only close reason) |
 | `close_time` | string | None | At archive only | UTC timestamp of archive |
 | `btc_change_entry_to_tp` | float | None | On FIRST TP hit only | `((btc_now - btc_entry) / btc_entry) * 100` — BTC's % change from signal entry to first TP hit. Only set once, never updated. |
-| `btc_trend_during_signal` | string | None | At archive only | "pumping" if BTC changed > +2%, "dumping" if < -2%, "ranging" if between |
+| `btc_trend_during_signal` | string | None | At archive only | Uses BTC price at first TP hit (from `tp{N}_btc_price_at_hit`) vs entry. If no TP was ever hit (failed signal), falls back to live BTC at archive time. "pumping" if change > +2%, "dumping" if < -2%, "ranging" if between. |
 
 ### Per-TP-target fields (for each of [5, 10, 20, 30, 50, 75, 100])
 
@@ -700,8 +700,9 @@ Every 300 seconds, as part of the tracker loop (`archive_expired()`).
    - `close_time` = archived_time
 
 5. **BTC trend during signal** (set ONLY at archive):
-   - Fetch current BTC price
-   - Calculate `btc_change = ((btc_now - btc_entry) / btc_entry) * 100`
+   - Find BTC reference price: use `tp{N}_btc_price_at_hit` from the **first** TP target hit (lowest N in `[5, 10, 20, 30, 50, 75, 100]` that was hit). This captures BTC's state during the signal's active success period, not 7 days later.
+   - If no TP was ever hit (failed signal): fall back to live BTC price at archive time
+   - Calculate `btc_change = ((btc_ref - btc_entry) / btc_entry) * 100`
    - If btc_change > +2% → `"pumping"`
    - If btc_change < -2% → `"dumping"`
    - Otherwise → `"ranging"`
@@ -714,7 +715,7 @@ Every 300 seconds, as part of the tracker loop (`archive_expired()`).
 
 1. **Group by month**: Each signal goes to `data/signals_YYYY_MM.json.gz` based on its `alert_time_ts`
 2. **Write gzip FIRST**: The gzip file is written before removing from active signals
-3. **Safety**: `archive_expired()` wraps the gzip write in a `try/except`. If the exception propagates, it returns 0 and signals remain in `data/signals.json`. **Note**: `_save_gzip()` currently catches `IOError` internally and logs it but does not re-raise — for full atomic safety, it should re-raise so the caller's `try/except` can catch it. This is a known gap.
+3. **Safety**: `archive_expired()` wraps the gzip write in a `try/except`. If gzip write fails, `_save_gzip()` logs the error and re-raises the `IOError`, which is caught by `archive_expired()` — it returns 0 and signals remain in `data/signals.json` (no data loss).
 4. **If gzip write succeeds**: Active signals file is updated (without the archived signals)
 5. **Compact JSON**: Uses `separators=(",", ":")` — no spaces, no indentation — for ~70-80% compression vs indented JSON
 6. **Atomic file write**: Uses `.tmp.gz` → `rename()` pattern to prevent corruption
@@ -872,7 +873,7 @@ python export_csv.py --history-only       # only archived signals
 ### File write safety
 - **JSON files**: Written to `.tmp` file first, then atomically renamed via `tmp.replace(path)`
 - **Gzip files**: Written to `.tmp.gz` first, then atomically renamed
-- **Archive atomicity intent**: `archive_expired()` wraps the gzip write in `try/except` and is designed to keep signals active on failure. However, as noted in Section 14, `_save_gzip()` catches `IOError` without re-raising, so this safety net does not fully work in the current code. See Section 14 for details.
+- **Archive atomicity**: `archive_expired()` wraps the gzip write in `try/except`. If gzip write fails, `_save_gzip()` re-raises the `IOError`, which is caught — signals remain in `data/signals.json` (no data loss).
 
 ---
 
