@@ -399,6 +399,29 @@ class TelegramCommandListener:
                         tp_line += f" (DD before: {tp_dd:+.2f}%)"
                     lines.append(tp_line)
 
+                    snap = sig.get(f"{key}_snapshot")
+                    if snap:
+                        snap_parts = []
+                        oi_chg = snap.get("oi_change_pct")
+                        if oi_chg is not None:
+                            snap_parts.append(f"OI {oi_chg:+.1f}%")
+                        fr = snap.get("funding_rate")
+                        if fr is not None:
+                            fr_ok = "✅" if snap.get("funding_in_ideal_range") else "⚠️"
+                            snap_parts.append(f"FR {fr_ok}{fr:.4f}%")
+                        mom_1h = snap.get("price_momentum_1h_pct")
+                        if mom_1h is not None:
+                            snap_parts.append(f"1h {mom_1h:+.1f}%")
+                        mom_4h = snap.get("price_momentum_4h_pct")
+                        if mom_4h is not None:
+                            snap_parts.append(f"4h {mom_4h:+.1f}%")
+                        colors = snap.get("candle_colors_at_hit")
+                        if colors:
+                            color_str = "".join("🟢" if c == "green" else "🔴" for c in colors)
+                            snap_parts.append(color_str)
+                        if snap_parts:
+                            lines.append(f"         📸 {' | '.join(snap_parts)}")
+
             if first_tp_hrs is not None:
                 lines.append(f"1st TP:    ⚡ {first_tp_hrs:.1f}h after entry")
 
@@ -575,6 +598,10 @@ class TelegramCommandListener:
                 "outcome":             sig.get("outcome", {}),
                 "price_journey":       sig.get("price_journey", []),
             }
+            for tp in self._tracker.tp_targets:
+                snap_key = f"tp{tp}_snapshot"
+                if sig.get(snap_key):
+                    record[snap_key] = sig[snap_key]
             report.append(record)
 
         now_ts = int(time.time())

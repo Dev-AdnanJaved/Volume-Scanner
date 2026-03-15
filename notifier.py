@@ -169,7 +169,11 @@ class TelegramNotifier:
 
     def _fmt_take_profit(self, d: dict) -> str:
         target = d["target"]
-        if target >= 15:
+        if target >= 75:
+            icon = "💎🚀🚀"
+        elif target >= 50:
+            icon = "🚀🚀🚀"
+        elif target >= 30:
             icon = "🚀🚀"
         elif target >= 10:
             icon = "🚀"

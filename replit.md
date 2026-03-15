@@ -10,6 +10,8 @@ A Python bot that monitors Binance USDT-M perpetual futures pairs for unusual tr
 - Market cap filtering via CoinGecko API
 - Signal tracker with take-profit alerts, reversal detection, and outcome tracking
 - Detailed outcome block per signal: TP hit timestamps, max drawdown, signal type classification, close lifecycle (signal_closed/close_reason/close_time), BTC context (btc_change_entry_to_tp, btc_trend_during_signal)
+- Full market snapshot at every TP hit (tp{level}_snapshot): same fields as entry additional_data (RVOL, OI, funding, EMA, volatility, market cap) plus price_momentum_1h_pct, price_momentum_4h_pct, candle_colors_at_hit — enables comparing conditions at each TP level
+- TP targets: [5, 10, 20, 30, 50, 75, 100] for deep tracking
 - Event-based price journey (new high/low, below entry, 4h checkpoint, TP hit, BTC >2% move) with btc_pct_from_signal_entry, volume_1h, is_new_low, is_new_high
 - Live signal_type classification (active → fast/slow/delayed as TPs are hit); failed only at archive
 - high_breakout_warning stored at signal root level only (not duplicated in outcome)

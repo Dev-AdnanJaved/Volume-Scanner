@@ -8,6 +8,8 @@ Responsibilities:
     4h checkpoint, TP hit, BTC >2% move) — not every hour
   - Maintain detailed outcome block (TP hit times, drawdown, signal type,
     close lifecycle, BTC context)
+  - Full market snapshot at every TP hit (same fields as entry additional_data
+    plus momentum and candle colors) for hold-vs-exit analysis
   - Live signal_type classification (active/fast/slow/delayed during tracking,
     failed only at archive)
   - Send take-profit target alerts when price hits configurable levels
@@ -49,7 +51,7 @@ class SignalTracker:
         self._signals_file = self._data_dir / "signals.json"
         self._history_file = self._data_dir / "history.json"
 
-        self._tp_targets: List[int] = sorted(tc.get("take_profit_targets", [5, 10, 15, 20]))
+        self._tp_targets: List[int] = sorted(tc.get("take_profit_targets", [5, 10, 20, 30, 50, 75, 100]))
         self._reversal_enabled: bool = tc.get("reversal_alert_enabled", True)
         self._min_reversal_peak: float = tc.get("min_reversal_peak_pct", 3.0)
         self._reversal_drop: float = tc.get("reversal_drop_from_peak_pct", 5.0)
@@ -240,6 +242,14 @@ class SignalTracker:
                         outcome[f"{key}_btc_price_at_hit"] = None
                     outcome[f"{key}_hit"] = True
         outcome.pop("high_breakout_warning", None)
+        for tp in self._tp_targets:
+            key = f"tp{tp}"
+            if f"{key}_hit" not in outcome:
+                outcome[f"{key}_hit"] = False
+                outcome[f"{key}_hit_time"] = None
+                outcome[f"{key}_hit_hours_after_entry"] = None
+                outcome[f"{key}_max_drawdown_before"] = None
+                outcome[f"{key}_btc_price_at_hit"] = None
         for field, default in (
             ("signal_closed", False),
             ("close_reason", None),
@@ -369,6 +379,194 @@ class SignalTracker:
             pass
         return None
 
+    @staticmethod
+    def _ema(values: List[float], period: int) -> float:
+        if len(values) < period:
+            return 0.0
+        k = 2 / (period + 1)
+        ema = sum(values[:period]) / period
+        for v in values[period:]:
+            ema = v * k + ema * (1 - k)
+        return ema
+
+    def _fetch_snapshot_market_data(self, symbol: str) -> dict:
+        data: dict = {}
+
+        try:
+            data["candles_1h"] = self._binance.get_closed_klines(symbol, "1h", 25)
+        except Exception:
+            data["candles_1h"] = []
+
+        try:
+            data["oi_hist"] = self._binance.get_oi_history(symbol, "1h", 25)
+        except Exception:
+            data["oi_hist"] = []
+
+        try:
+            data["funding_rate"] = self._binance.get_funding_rate(symbol)
+        except Exception:
+            data["funding_rate"] = None
+
+        try:
+            data["candles_4h"] = self._binance.get_closed_klines(symbol, "4h", 55)
+        except Exception:
+            data["candles_4h"] = []
+
+        try:
+            if self._market_cap is not None:
+                base = symbol.replace("USDT", "").replace("BUSD", "")
+                data["market_cap_usd"] = self._market_cap.get(base)
+                data["market_cap_fmt"] = self._market_cap.format(base)
+        except Exception:
+            pass
+
+        return data
+
+    def _build_tp_snapshot(
+        self, symbol: str, sig: dict, target: int,
+        now: float, btc_at_check: Optional[float],
+        market_data: dict, cached_tickers: Optional[dict],
+    ) -> dict:
+        entry = sig.get("entry_price", 0)
+        outcome = sig.get("outcome", {})
+
+        snapshot: dict = {
+            "hit_time": self._ts_to_utc(now),
+            "hit_hours_after_entry": self._hours_since(sig["alert_time_ts"], now),
+            "max_drawdown_before": outcome.get("max_drawdown_pct", 0.0),
+            "btc_price_at_hit": btc_at_check,
+        }
+
+        btc_entry = sig.get("btc_price")
+        if btc_entry and btc_at_check and btc_entry > 0:
+            snapshot["btc_pct_change_since_entry"] = round(
+                ((btc_at_check - btc_entry) / btc_entry) * 100.0, 2
+            )
+        else:
+            snapshot["btc_pct_change_since_entry"] = None
+
+        candles_1h = market_data.get("candles_1h", [])
+        last = candles_1h[-1] if candles_1h else None
+
+        try:
+            if candles_1h and len(candles_1h) >= 21 and last:
+                baseline = candles_1h[-(20 + 1):-1]
+                if baseline:
+                    avg_b = sum(c["quote_volume"] for c in baseline) / len(baseline)
+                    snapshot["rvol_20"] = round(last["quote_volume"] / avg_b, 2) if avg_b > 0 else None
+                    snapshot["vol_baseline_avg"] = round(avg_b, 2)
+        except Exception:
+            pass
+
+        try:
+            oi_hist = market_data.get("oi_hist", [])
+            if len(oi_hist) >= 2:
+                current_oi = oi_hist[-1]["oi_value_usdt"]
+                prev_oi_values = [h["oi_value_usdt"] for h in oi_hist[:-1]]
+                avg_oi = sum(prev_oi_values) / len(prev_oi_values)
+                snapshot["oi_current_usdt"] = round(current_oi, 2)
+                snapshot["oi_avg_24h_usdt"] = round(avg_oi, 2)
+                snapshot["oi_change_pct"] = round(((current_oi - avg_oi) / avg_oi) * 100, 2) if avg_oi > 0 else None
+                if len(oi_hist) >= 3:
+                    oi_changes = [
+                        oi_hist[i]["oi_value_usdt"] - oi_hist[i - 1]["oi_value_usdt"]
+                        for i in range(1, len(oi_hist))
+                    ]
+                    current_oi_growth = oi_changes[-1]
+                    avg_oi_growth = sum(oi_changes[:-1]) / len(oi_changes[:-1]) if oi_changes[:-1] else 0
+                    snapshot["oi_growth_current"] = round(current_oi_growth, 2)
+                    snapshot["oi_growth_avg"] = round(avg_oi_growth, 2)
+                    if avg_oi_growth != 0:
+                        snapshot["oi_growth_ratio"] = round(current_oi_growth / abs(avg_oi_growth), 2)
+        except Exception:
+            pass
+
+        try:
+            fr = market_data.get("funding_rate")
+            if fr is not None:
+                snapshot["funding_rate"] = round(fr * 100, 4)
+                snapshot["funding_in_ideal_range"] = -0.02 <= fr * 100 <= 0.15
+        except Exception:
+            pass
+
+        try:
+            if cached_tickers:
+                ticker = cached_tickers.get(symbol, {})
+                vol_24h = ticker.get("quote_volume_24h", 0)
+                snapshot["vol_24h_usdt"] = round(vol_24h, 2)
+                snapshot["vol_24h_above_50m"] = vol_24h >= 50_000_000
+        except Exception:
+            pass
+
+        try:
+            candles_4h = market_data.get("candles_4h", [])
+            if len(candles_4h) >= 50:
+                closes_4h = [c["close"] for c in candles_4h]
+                ema50 = self._ema(closes_4h, 50)
+                current_price = sig.get("current_price", entry)
+                snapshot["ema50_4h"] = round(ema50, 8)
+                snapshot["price_above_ema50_4h"] = current_price > ema50
+                snapshot["ema50_distance_pct"] = round(((current_price - ema50) / ema50) * 100, 2) if ema50 > 0 else None
+        except Exception:
+            pass
+
+        try:
+            if candles_1h and len(candles_1h) >= 20:
+                recent_10 = candles_1h[-10:]
+                prior_10 = candles_1h[-20:-10]
+
+                def avg_range(cs):
+                    return sum((c["high"] - c["low"]) / c["close"] * 100 for c in cs if c["close"] > 0) / len(cs)
+
+                recent_range_pct = avg_range(recent_10)
+                prior_range_pct = avg_range(prior_10)
+                snapshot["volatility_recent_10_pct"] = round(recent_range_pct, 4)
+                snapshot["volatility_prior_10_pct"] = round(prior_range_pct, 4)
+                if prior_range_pct > 0:
+                    compression_ratio = recent_range_pct / prior_range_pct
+                    snapshot["volatility_compression_ratio"] = round(compression_ratio, 3)
+                    snapshot["is_compressed"] = compression_ratio < 0.7
+        except Exception:
+            pass
+
+        try:
+            mcap = market_data.get("market_cap_usd")
+            if mcap is not None:
+                snapshot["market_cap_usd"] = mcap
+                snapshot["market_cap_fmt"] = market_data.get("market_cap_fmt")
+        except Exception:
+            pass
+
+        try:
+            if candles_1h and len(candles_1h) >= 2:
+                prev_close = candles_1h[-2]["close"]
+                cur_close = candles_1h[-1]["close"]
+                if prev_close > 0:
+                    snapshot["price_momentum_1h_pct"] = round(((cur_close - prev_close) / prev_close) * 100, 2)
+        except Exception:
+            pass
+
+        try:
+            candles_4h = market_data.get("candles_4h", [])
+            if len(candles_4h) >= 2:
+                prev_close_4h = candles_4h[-2]["close"]
+                cur_close_4h = candles_4h[-1]["close"]
+                if prev_close_4h > 0:
+                    snapshot["price_momentum_4h_pct"] = round(((cur_close_4h - prev_close_4h) / prev_close_4h) * 100, 2)
+        except Exception:
+            pass
+
+        try:
+            if candles_1h and len(candles_1h) >= 3:
+                last_3 = candles_1h[-3:]
+                snapshot["candle_colors_at_hit"] = [
+                    "green" if c["close"] >= c["open"] else "red" for c in last_3
+                ]
+        except Exception:
+            pass
+
+        return snapshot
+
     def _add_journey_event(self, sig: dict, event: str, now: float,
                            btc_price: Optional[float]) -> None:
         journey = sig.get("price_journey")
@@ -427,6 +625,8 @@ class SignalTracker:
             except Exception:
                 btc_at_check = None
 
+            cached_tickers: Optional[dict] = None
+
             for sig in signals:
                 entry = sig.get("entry_price", 0)
                 if entry <= 0:
@@ -441,44 +641,70 @@ class SignalTracker:
                 tp_sent: list = sig.get("tp_sent", [])
                 outcome = self._ensure_outcome(sig)
 
+                new_hits = []
                 for target in self._tp_targets:
                     if target in tp_sent:
                         continue
                     if high_pct >= target:
-                        tp_sent.append(target)
-                        changed = True
+                        new_hits.append(target)
 
-                        key = f"tp{target}"
-                        outcome[f"{key}_hit"] = True
-                        outcome[f"{key}_hit_time"] = self._ts_to_utc(now)
-                        outcome[f"{key}_hit_hours_after_entry"] = self._hours_since(sig["alert_time_ts"], now)
-                        outcome[f"{key}_max_drawdown_before"] = outcome.get("max_drawdown_pct", 0.0)
-                        outcome[f"{key}_btc_price_at_hit"] = btc_at_check
+                if new_hits:
+                    if cached_tickers is None:
+                        try:
+                            cached_tickers = self._binance.get_24h_tickers()
+                        except Exception:
+                            cached_tickers = {}
 
-                        if outcome.get("btc_change_entry_to_tp") is None:
-                            btc_entry = sig.get("btc_price")
-                            if btc_entry and btc_at_check and btc_entry > 0:
-                                outcome["btc_change_entry_to_tp"] = round(
-                                    ((btc_at_check - btc_entry) / btc_entry) * 100.0, 2
-                                )
+                    try:
+                        market_data = self._fetch_snapshot_market_data(sig["symbol"])
+                    except Exception:
+                        market_data = {}
 
-                        self._add_journey_event(sig, f"tp_hit_{target}", now, btc_at_check)
+                for target in new_hits:
+                    tp_sent.append(target)
+                    changed = True
 
-                        alerts_to_send.append({
-                            "type":          "take_profit",
-                            "symbol":        sig["symbol"],
-                            "target":        target,
-                            "entry_price":   entry,
-                            "current_price": current,
-                            "highest_price": highest,
-                            "cur_pct":       cur_pct,
-                            "high_pct":      high_pct,
-                            "age_str":       age_str,
-                        })
-                        logger.info(
-                            "🎯 TP target +%d%% hit for %s (peak: +%.2f%%, now: %+.2f%%)",
-                            target, sig["symbol"], high_pct, cur_pct,
+                    key = f"tp{target}"
+                    outcome[f"{key}_hit"] = True
+                    outcome[f"{key}_hit_time"] = self._ts_to_utc(now)
+                    outcome[f"{key}_hit_hours_after_entry"] = self._hours_since(sig["alert_time_ts"], now)
+                    outcome[f"{key}_max_drawdown_before"] = outcome.get("max_drawdown_pct", 0.0)
+                    outcome[f"{key}_btc_price_at_hit"] = btc_at_check
+
+                    if outcome.get("btc_change_entry_to_tp") is None:
+                        btc_entry = sig.get("btc_price")
+                        if btc_entry and btc_at_check and btc_entry > 0:
+                            outcome["btc_change_entry_to_tp"] = round(
+                                ((btc_at_check - btc_entry) / btc_entry) * 100.0, 2
+                            )
+
+                    try:
+                        tp_snapshot = self._build_tp_snapshot(
+                            sig["symbol"], sig, target, now, btc_at_check,
+                            market_data, cached_tickers,
                         )
+                        sig[f"{key}_snapshot"] = tp_snapshot
+                    except Exception as exc:
+                        logger.warning("TP snapshot collection failed for %s +%d%%: %s",
+                                       sig["symbol"], target, exc)
+
+                    self._add_journey_event(sig, f"tp_hit_{target}", now, btc_at_check)
+
+                    alerts_to_send.append({
+                        "type":          "take_profit",
+                        "symbol":        sig["symbol"],
+                        "target":        target,
+                        "entry_price":   entry,
+                        "current_price": current,
+                        "highest_price": highest,
+                        "cur_pct":       cur_pct,
+                        "high_pct":      high_pct,
+                        "age_str":       age_str,
+                    })
+                    logger.info(
+                        "🎯 TP target +%d%% hit for %s (peak: +%.2f%%, now: %+.2f%%)",
+                        target, sig["symbol"], high_pct, cur_pct,
+                    )
 
                 sig["tp_sent"] = tp_sent
 

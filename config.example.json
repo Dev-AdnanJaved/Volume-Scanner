@@ -24,7 +24,7 @@
     "max_age_hours": 168,
     "price_update_interval_seconds": 300,
     "data_dir": "data",
-    "take_profit_targets": [5, 10, 15, 20],
+    "take_profit_targets": [5, 10, 20, 30, 50, 75, 100],
     "reversal_alert_enabled": true,
     "min_reversal_peak_pct": 3.0,
     "reversal_drop_from_peak_pct": 5.0,
