@@ -796,7 +796,6 @@ class SignalTracker:
             tmp.replace(path)
         except IOError as exc:
             logger.error("Failed to write gzip %s: %s", path, exc)
-            raise
 
     def _append_to_monthly_gz(self, signals: list) -> None:
         by_month: Dict[Path, list] = {}

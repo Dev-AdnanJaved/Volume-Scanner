@@ -714,7 +714,7 @@ Every 300 seconds, as part of the tracker loop (`archive_expired()`).
 
 1. **Group by month**: Each signal goes to `data/signals_YYYY_MM.json.gz` based on its `alert_time_ts`
 2. **Write gzip FIRST**: The gzip file is written before removing from active signals
-3. **If gzip write fails**: Returns 0, signals remain in `data/signals.json` (no data loss)
+3. **Safety**: `archive_expired()` wraps the gzip write in a `try/except`. If the exception propagates, it returns 0 and signals remain in `data/signals.json`. **Note**: `_save_gzip()` currently catches `IOError` internally and logs it but does not re-raise — for full atomic safety, it should re-raise so the caller's `try/except` can catch it. This is a known gap.
 4. **If gzip write succeeds**: Active signals file is updated (without the archived signals)
 5. **Compact JSON**: Uses `separators=(",", ":")` — no spaces, no indentation — for ~70-80% compression vs indented JSON
 6. **Atomic file write**: Uses `.tmp.gz` → `rename()` pattern to prevent corruption
