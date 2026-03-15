@@ -821,6 +821,12 @@ The command listener runs as a daemon thread, polling Telegram for messages via 
 - Sends as Telegram document attachment
 - Caption: signal count + file size + generated timestamp (e.g., "Flat CSV Export\nSignals: 20\nSize: 45.2 KB\nGenerated: 2026-03-15 08:00 UTC")
 
+#### `/validate` — Data Integrity Check
+- Checks all active signals for data completeness
+- Validates: additional_data not empty, oi_growth_ratio, funding_rate, rvol_20, vol_24h_usdt, vol_24h_base, high_breakout_warning, vol_candle_1_base, outcome TP fields
+- Reports: total signals, clean count, issue count, and lists each issue
+- Truncates at 50 issues to avoid Telegram message limits
+
 #### `/help` — Command Reference
 Lists all commands with descriptions, tracking window, update frequency, TP alert info, and signal criteria summary.
 

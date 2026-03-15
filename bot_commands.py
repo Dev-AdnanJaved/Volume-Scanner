@@ -225,6 +225,7 @@ class TelegramCommandListener:
             "/export":          lambda: self._cmd_export(chat_id),
             "/detailed_report": lambda: self._cmd_detailed_report(chat_id),
             "/export_csv":      lambda: self._cmd_export_csv(chat_id),
+            "/validate":        lambda: self._cmd_validate(chat_id),
             "/help":            lambda: self._cmd_help(chat_id),
             "/start":           lambda: self._cmd_help(chat_id),
         }
@@ -734,6 +735,71 @@ class TelegramCommandListener:
             logger.error("CSV export failed: %s", exc)
             self._send(chat_id, f"❌ CSV export failed: {exc}")
 
+    # ── /validate ──────────────────────────────────────────────────────
+
+    def _cmd_validate(self, chat_id: str) -> None:
+        signals = self._tracker.get_active_signals()
+
+        if not signals:
+            self._send(chat_id, "🔍 <b>VALIDATE</b>\n\nNo active signals to check.")
+            return
+
+        issues: list = []
+        tp_targets = self._tracker.tp_targets
+
+        for s in signals:
+            sym = s.get("symbol", "???")
+            ad = s.get("additional_data", {})
+            out = s.get("outcome", {})
+
+            if not ad:
+                issues.append(f"{sym}: additional_data is empty")
+            else:
+                if ad.get("oi_growth_ratio") is None:
+                    issues.append(f"{sym}: oi_growth_ratio is null")
+                if ad.get("funding_rate") is None:
+                    issues.append(f"{sym}: funding_rate is null")
+                if ad.get("rvol_20") is None:
+                    issues.append(f"{sym}: rvol_20 is null")
+                if ad.get("vol_24h_usdt") is None:
+                    issues.append(f"{sym}: vol_24h_usdt missing")
+                if ad.get("vol_24h_base") is None:
+                    issues.append(f"{sym}: vol_24h_base missing")
+
+            if "high_breakout_warning" not in s:
+                issues.append(f"{sym}: high_breakout_warning missing")
+
+            if s.get("vol_candle_1_base") is None:
+                issues.append(f"{sym}: vol_candle_1_base missing")
+
+            for tp in tp_targets:
+                key = f"tp{tp}_hit"
+                if out.get(key) is None:
+                    issues.append(f"{sym}: {key} missing from outcome")
+                    break
+
+        clean = len(signals) - len(set(i.split(":")[0] for i in issues))
+        lines = [
+            "🔍 <b>VALIDATE</b>",
+            "",
+            f"📊 Total signals: {len(signals)}",
+            f"✅ Clean: {clean}",
+            f"⚠️ With issues: {len(signals) - clean}",
+        ]
+
+        if issues:
+            lines.append("")
+            lines.append(f"<b>{len(issues)} issue(s) found:</b>")
+            for i in issues[:50]:
+                lines.append(f"  • {i}")
+            if len(issues) > 50:
+                lines.append(f"  ... and {len(issues) - 50} more")
+        else:
+            lines.append("")
+            lines.append("🎉 All signals look clean!")
+
+        self._send(chat_id, "\n".join(lines))
+
     # ── /help ────────────────────────────────────────────────────────
 
     def _cmd_help(self, chat_id: str) -> None:
@@ -748,6 +814,7 @@ class TelegramCommandListener:
             "                   Includes all main + additional data,\n"
             "                   peak, lowest, exit prices\n"
             "/export_csv — Flat CSV of all signals for analysis\n"
+            "/validate — Data integrity check on active signals\n"
             "/help — This message\n\n"
             f"📡 Tracking window: {self._tracker.max_age_hours}h\n"
             "🏔 Prices update every 5 min\n"
