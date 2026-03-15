@@ -733,7 +733,7 @@ class TelegramCommandListener:
             sig.pop("_prev_highest", None)
             sig.pop("_prev_lowest", None)
 
-        data = matches[0] if len(matches) == 1 else matches
+        data = matches
 
         now_ts = int(time.time())
         tmp_path = f"/tmp/{sym}_{now_ts}.json"

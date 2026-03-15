@@ -826,7 +826,7 @@ The command listener runs as a daemon thread, polling Telegram for messages via 
 - Filters active signals for the specified coin
 - Updates prices before export for fresh current_price/highest_price
 - Sends as Telegram document (JSON file) with signal count and timestamp
-- If single signal: JSON is the signal object directly; if multiple: JSON is an array
+- JSON output is always an array (even for a single signal) for consistent schema
 - If coin not found: sends "No active signal for ETHUSDT"
 
 #### `/validate` — Data Integrity Check
