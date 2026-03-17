@@ -771,12 +771,14 @@ class TelegramCommandListener:
         self._send(chat_id, "⏳ Building flat CSV export…")
 
         try:
-            from export_csv import load_all_signals, build_csv
+            from export_csv import load_all_signals, build_csv, compute_fieldnames
 
             signals = load_all_signals(active=True, history=True)
             if not signals:
                 self._send(chat_id, "📭 No signals found (active or archived).")
                 return
+
+            all_fieldnames = compute_fieldnames(signals)
 
             chunks = self._chunks(signals)
             total_parts = len(chunks)
@@ -791,7 +793,7 @@ class TelegramCommandListener:
                 part_label = f"Part {idx}/{total_parts} • " if total_parts > 1 else ""
                 tmp_path = f"/tmp/signals_flat_part{idx}of{total_parts}_{now_str}_{now_ts}.csv"
                 try:
-                    count = build_csv(chunk, tmp_path)
+                    count = build_csv(chunk, tmp_path, fieldnames=all_fieldnames)
 
                     file_size = os.path.getsize(tmp_path)
                     size_str = f"{file_size / 1024:.1f} KB" if file_size < 1_048_576 else f"{file_size / 1_048_576:.1f} MB"

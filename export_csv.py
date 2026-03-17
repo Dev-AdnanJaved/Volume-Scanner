@@ -128,11 +128,7 @@ def flatten_signal(sig: dict) -> dict:
     return row
 
 
-def build_csv(signals: list, output_path: str) -> int:
-    if not signals:
-        logger.warning("No signals to export")
-        return 0
-
+def compute_fieldnames(signals: list) -> list[str]:
     rows = [flatten_signal(sig) for sig in signals]
 
     all_columns: list[str] = []
@@ -177,16 +173,29 @@ def build_csv(signals: list, output_path: str) -> int:
     remaining = [c for c in all_columns if c not in set(ordered)]
     ordered.extend(sorted(remaining))
 
+    return ordered
+
+
+def build_csv(signals: list, output_path: str, fieldnames: list[str] | None = None) -> int:
+    if not signals:
+        logger.warning("No signals to export")
+        return 0
+
+    rows = [flatten_signal(sig) for sig in signals]
+
+    if fieldnames is None:
+        fieldnames = compute_fieldnames(signals)
+
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
 
     with open(out, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=ordered, extrasaction="ignore")
+        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
         for r in rows:
             writer.writerow(r)
 
-    logger.info("Exported %d signals → %s (%d columns)", len(rows), output_path, len(ordered))
+    logger.info("Exported %d signals → %s (%d columns)", len(rows), output_path, len(fieldnames))
     return len(rows)
 
 
