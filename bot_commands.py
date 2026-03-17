@@ -28,6 +28,8 @@ from tracker import SignalTracker
 
 logger = logging.getLogger(__name__)
 
+EXPORT_CHUNK_SIZE = 200
+
 
 class TelegramCommandListener:
 
@@ -114,6 +116,49 @@ class TelegramCommandListener:
                 logger.error("Telegram sendDocument failed (attempt %d): %s", attempt + 1, exc)
                 time.sleep(2)
         return False
+
+    @staticmethod
+    def _chunks(lst: list, size: int = EXPORT_CHUNK_SIZE) -> list:
+        return [lst[i:i + size] for i in range(0, len(lst), size)]
+
+    def _send_chunked_json(self, chat_id: str, data: list, prefix: str, label: str) -> None:
+        if not data:
+            self._send(chat_id, f"📭 No signals for {label}.")
+            return
+
+        chunks = self._chunks(data)
+        total_parts = len(chunks)
+        now_ts = int(time.time())
+        gen_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+        for idx, chunk in enumerate(chunks, 1):
+            part_label = f"Part {idx}/{total_parts} • " if total_parts > 1 else ""
+            tmp_path = f"/tmp/{prefix}_part{idx}of{total_parts}_{now_ts}.json"
+            try:
+                with open(tmp_path, "w", encoding="utf-8") as f:
+                    json.dump(chunk, f, indent=2)
+
+                caption = (
+                    f"{label}\n"
+                    f"{part_label}{len(chunk)} signals\n"
+                    f"Total: {len(data)}\n"
+                    f"Generated: {gen_str}"
+                )
+                success = self._send_document(chat_id, tmp_path, caption)
+
+                if not success:
+                    self._send(chat_id, f"❌ Failed to send file part {idx}.")
+                    return
+            except Exception as exc:
+                self._send(chat_id, f"❌ Failed to write/send file part {idx}: {exc}")
+                return
+            finally:
+                try:
+                    os.remove(tmp_path)
+                except Exception:
+                    pass
+
+        logger.info("%s sent: %d signals in %d file(s)", label, len(data), total_parts)
 
     def _poll(self) -> list:
         try:
@@ -607,31 +652,11 @@ class TelegramCommandListener:
                     record[k] = v
             report.append(record)
 
-        now_ts = int(time.time())
-        tmp_path = f"/tmp/detailed_report_{now_ts}.json"
-        try:
-            with open(tmp_path, "w", encoding="utf-8") as f:
-                json.dump(report, f, indent=2)
-        except Exception as exc:
-            self._send(chat_id, f"❌ Failed to write report file: {exc}")
-            return
+        chunks = self._chunks(report)
+        if len(chunks) > 1:
+            self._send(chat_id, f"📊 {len(report)} signals → {len(chunks)} files ({EXPORT_CHUNK_SIZE} per file)")
 
-        caption = (
-            f"📊 Detailed Signal Report\n"
-            f"Signals: {len(report)}\n"
-            f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
-        )
-        success = self._send_document(chat_id, tmp_path, caption)
-
-        try:
-            os.remove(tmp_path)
-        except Exception:
-            pass
-
-        if not success:
-            self._send(chat_id, "❌ Failed to send report file. Check bot logs.")
-        else:
-            logger.info("Detailed report sent: %d signals", len(report))
+        self._send_chunked_json(chat_id, report, "detailed_report", "📊 Detailed Signal Report")
 
     # ── /export ─────────────────────────────────────────────────────
 
@@ -666,32 +691,11 @@ class TelegramCommandListener:
             sig.pop("_prev_highest", None)
             sig.pop("_prev_lowest", None)
 
-        now_ts = int(time.time())
-        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        tmp_path = f"/tmp/active_signals_{now_str}_{now_ts}.json"
-        try:
-            with open(tmp_path, "w", encoding="utf-8") as f:
-                json.dump(signals, f, indent=2)
-        except Exception as exc:
-            self._send(chat_id, f"❌ Failed to write file: {exc}")
-            return
+        chunks = self._chunks(signals)
+        if len(chunks) > 1:
+            self._send(chat_id, f"📡 {len(signals)} signals → {len(chunks)} files ({EXPORT_CHUNK_SIZE} per file)")
 
-        caption = (
-            f"📡 Active Signals Export\n"
-            f"Signals: {len(signals)}\n"
-            f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
-        )
-        success = self._send_document(chat_id, tmp_path, caption)
-
-        try:
-            os.remove(tmp_path)
-        except Exception:
-            pass
-
-        if not success:
-            self._send(chat_id, "❌ Failed to send file. Check bot logs.")
-        else:
-            logger.info("Active signals export sent: %d signals", len(signals))
+        self._send_chunked_json(chat_id, signals, "active_signals", "📡 Active Signals Export")
 
     # ── /coin ──────────────────────────────────────────────────────────
 
@@ -774,32 +778,47 @@ class TelegramCommandListener:
                 self._send(chat_id, "📭 No signals found (active or archived).")
                 return
 
+            chunks = self._chunks(signals)
+            total_parts = len(chunks)
+            if total_parts > 1:
+                self._send(chat_id, f"📊 {len(signals)} signals → {total_parts} files ({EXPORT_CHUNK_SIZE} per file)")
+
             now_ts = int(time.time())
             now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-            tmp_path = f"/tmp/signals_flat_{now_str}_{now_ts}.csv"
+            gen_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
-            count = build_csv(signals, tmp_path)
+            for idx, chunk in enumerate(chunks, 1):
+                part_label = f"Part {idx}/{total_parts} • " if total_parts > 1 else ""
+                tmp_path = f"/tmp/signals_flat_part{idx}of{total_parts}_{now_str}_{now_ts}.csv"
+                try:
+                    count = build_csv(chunk, tmp_path)
 
-            file_size = os.path.getsize(tmp_path)
-            size_str = f"{file_size / 1024:.1f} KB" if file_size < 1_048_576 else f"{file_size / 1_048_576:.1f} MB"
+                    file_size = os.path.getsize(tmp_path)
+                    size_str = f"{file_size / 1024:.1f} KB" if file_size < 1_048_576 else f"{file_size / 1_048_576:.1f} MB"
 
-            caption = (
-                f"📊 Flat CSV Export\n"
-                f"Signals: {count}\n"
-                f"Size: {size_str}\n"
-                f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
-            )
-            success = self._send_document(chat_id, tmp_path, caption)
+                    caption = (
+                        f"📊 Flat CSV Export\n"
+                        f"{part_label}{count} signals\n"
+                        f"Total: {len(signals)}\n"
+                        f"Size: {size_str}\n"
+                        f"Generated: {gen_str}"
+                    )
+                    success = self._send_document(chat_id, tmp_path, caption)
 
-            try:
-                os.remove(tmp_path)
-            except Exception:
-                pass
+                    if not success:
+                        self._send(chat_id, f"❌ Failed to send CSV file part {idx}.")
+                        return
+                except Exception as exc:
+                    logger.error("CSV export chunk %d failed: %s", idx, exc)
+                    self._send(chat_id, f"❌ CSV export failed on part {idx}: {exc}")
+                    return
+                finally:
+                    try:
+                        os.remove(tmp_path)
+                    except Exception:
+                        pass
 
-            if not success:
-                self._send(chat_id, "❌ Failed to send CSV file.")
-            else:
-                logger.info("CSV export sent: %d signals, %s", count, size_str)
+            logger.info("CSV export sent: %d signals in %d file(s)", len(signals), total_parts)
         except Exception as exc:
             logger.error("CSV export failed: %s", exc)
             self._send(chat_id, f"❌ CSV export failed: {exc}")

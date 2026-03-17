@@ -807,19 +807,21 @@ The command listener runs as a daemon thread, polling Telegram for messages via 
 - Shows tracking window length
 
 #### `/export` — JSON File of Active Signals
-- Sends `data/signals.json` as a Telegram document attachment
+- Sends active signals as JSON Telegram document(s)
 - Strips `_prev_highest` and `_prev_lowest` internal fields from the JSON before sending
-- Caption: signal count + generated timestamp (e.g., "Active Signals Export\nSignals: 12\nGenerated: 2026-03-15 08:00 UTC")
+- **Chunked**: splits into multiple files of 200 signals each when total exceeds 200
+- Caption per file: label, part number (if multi-file), signal count, total count, generated timestamp
 
 #### `/detailed_report` — JSON of Completed Signals
-- Builds a JSON file of signals from `get_completed_signals()` with `min_age = detailed_report_min_age_hours` (default: 168h)
+- Builds JSON file(s) of signals from `get_completed_signals()` with `min_age = detailed_report_min_age_hours` (default: 168h)
 - Includes TP snapshots (any key ending with `_snapshot`)
-- Caption: signal count + generated timestamp (e.g., "Detailed Signal Report\nSignals: 8\nGenerated: 2026-03-15 08:00 UTC")
+- **Chunked**: splits into multiple files of 200 signals each when total exceeds 200
+- Caption per file: label, part number (if multi-file), signal count, total count, generated timestamp
 
 #### `/export_csv` — Flat CSV Export
 - Calls `export_csv.build_csv()` to flatten ALL signals (active + archived) into CSV
-- Sends as Telegram document attachment
-- Caption: signal count + file size + generated timestamp (e.g., "Flat CSV Export\nSignals: 20\nSize: 45.2 KB\nGenerated: 2026-03-15 08:00 UTC")
+- **Chunked**: splits into multiple CSV files of 200 signals each when total exceeds 200. Each file has its own header row.
+- Caption per file: label, part number (if multi-file), signal count, total count, file size, generated timestamp
 
 #### `/coin ETH` — Single Coin JSON Export
 - Accepts base name (`ETH`) or full symbol (`ETHUSDT`) — auto-appends USDT if missing
